@@ -1,0 +1,195 @@
+A guide for my struggles setting up idris to write a real program
+
+Starting conditions:
+1) I'm on windows
+2) No vim experience
+3) Only some functional programming experience
+4) lots of visual studio experience
+5) lots of math experience (not so helpful)
+
+Phase 1: Hello world.
+1) download idris 
+--What To Do: I got it from from https://github.com/idris-lang/Idris-dev/wiki/Windows-Binaries, although by the
+time you're reading this who knows. What you want is the binaries, and
+ultimately an exe. Extrat everything into a folder in myloc.The primary
+fruit of this step is to get the idris.exe file you'll see in the main
+directory. That thing is your repl. So that's nice.
+--How to verify:
+Open up the shell and cd to the directory with idris.exe in it. 
+Execute "idris" and you should enter the repl. Use :q to quite it. 
+
+2) Set your path variable.
+--What To Do: While I techincally perfomed this step later, I should have done it
+immediately. Use your windows key and search for environment variables. Click
+on it and you should see several variables (some for user, some for system).
+Find your user's path variables, and append "myloc/idris/" (like path1;path2;...;pathn) 
+That should be the path to the folder that contains the exe from step 1. Doing
+this will allow you to call the "idris" command from the shell regardless of
+your current directory.
+
+--How to verify: 
+Open the shell from some other location and execute "idris". It should just
+work.
+
+3) write a hello world.
+--What to do: You'll want to create a new file called hello.idr
+and put the following text in it (no vim required. Notepad will suffice).
+
+Hello: IO()
+Hello= putStrLn "Hello World"
+
+Put this in a directory called myloc/hello.
+
+-- How to verify: Cd into that directory and open your idris REPL
+use the command ":load hello.idr" That should work. It should typecheck as
+well. Then, execute ":x Hello". You should see it print "Hello World", and
+then some type information. 
+
+Phase 2) Setting up Vim.
+1) Download vim.
+Just google it. I started with gvim, then switched to normal vim. The
+excercise of having to look up keyboard commands for things seems to be paying
+off. Shouldn't matter for the purposes of this instruction. 
+--Verify it worked: open your Hello.idr into vim (and tell windows to treat
+all idr files as vim files). It should work, but you probably have some
+complaints. We'll address those in the next sections. (Note to exit vim, you
+need to make sure you're in normal mode, not insert mode. Hit escape until
+you'are in normal mode. Then the command is :w to save and :q to quit. 
+
+
+Complaint 1: Vim is leaving files around.
+Yup, this is a thing vim does apparently. So we'll need to configure it. In
+the root of your vim directory, you should see a file called _vimrc. This is a
+bit of vim script that runs on startup. We want to add some commands that set
+the locations for the swap files (crash recovery) backup files (longer term
+recovery) and undo files (persisent record of the undo stack, which is a neat
+feature). Add the lines 
+
+set directory=C:/vimhelp/swap//
+set undodir=C:/vimhelp/undo//
+set backupdir=C:/vimhelp/backup//
+
+to set your swap, undo and backup directory to those places. Note that the //
+on the end is critical. This prepends your file name with its path to
+disambiguate between files with the same name in different directories. If you
+google how to do this, you'll end up with some slightly more complicated
+stuff, that probably works in far more generality than this. This is not the
+best solution, it's just the one that has worked for me so far. 
+Verifying that this works is easy. Edit your _vimrc file. Open your Hello.idr
+in vim. And make an edit to it, and save it. You should see that no files
+appear in the same directory as Hello.idr, and that those files instead appear
+in the place you asked for in _vimrc.
+
+Complaint 2: The font is for tiny ants. 
+add 
+
+set guifont=Consolas:h14:cANSI:qDRAFT
+
+to your _vimrc. It should now be for normal people (on high res laptops). 
+
+Complaint 3: no sytnax highlighting.
+Idris-vim is a package to help you with this problem. Once again, just google it.
+However, you'll need to install it if you want to use it. If you have
+experience with vim just do your thing. Alternatively, you can read what I did and sneer 
+at my ignorance.  I realized after downloading idris-vim I actually needed something like a package
+manager. But I was on a plane. So I got creative. I noticed that the structure
+of idris-vim was similar file structue to that in the vim/vim80 folder, so I
+just copy pasted the contents of idris-vim into vim80, and let windows merge
+the folders. It worked! Note that you also had to 
+
+add syntax on
+filetype on
+filetype plugin indent on
+
+to your _vimrc file.
+
+To verify it worked, you'll first notice syntax highlighting which is nice.
+Next, you'll notice that if you type some other idris, you'll get some
+auto-indent stuff, which is neat.
+
+Phase 3) Running commands from idris vim
+Ok, now it starts to get fun. First thing I lost some time to is how to call a
+repl command from in vim (which is all I wanted). There's a thing called the
+"localleader" which is a special key for interacting with plugins (at least in
+this case. I don't really care what it mean in general). Unless you changed
+some weird stuff, '\' should be your localleader. So open up Hello.idr in vim.
+The command to compile your file is '\r'. It should fail if you try right now.
+Turns out you need an idris repl running in another shell. So open up another
+shell and run "idris". hit \r again in your vim windows and it should work. 
+This is a good first step. The next most useful function is "\t" which returns
+tupe information about whatever the cursor is hovering over. Verify that works
+as well. 
+
+But, often the files we want to compile depend on other nearby files. This
+leads to weirdness. The idris repl needs to know how to look for those files.
+Right now, I can only figure out how to do this by using the :cd command in
+the repl (or just openning from the right place) and that shockingly works.
+Note that namespaces like Foo.Bar will look for the bar module in the Foo
+directory.
+
+The solution: learn vimscript! Well, just a minor edit to the idris-vim plugin.
+The idea is to force the repl to cd to the right directory before doing anything.
+This will set the repl up for success in terms of finding dependencies. 
+The ftplugin folder has a idris.vim file in it. This is the thing that needs
+editting. We're going to change the repl-interop code to always cd first. 
+We replace the existing s:IdrisCommand method with an internal helper
+and a wrapper that asks the repl to cd first. 
+
+function! s:IdrisCommand(...)
+  let cdcmd = s:IdrisCommandInt([":cd", getcwd()])
+  return s:IdrisCommandInt(a:000)
+endfunction
+
+function! s:IdrisCommandInt(args)
+  let idriscmd = shellescape(join(a:args))
+  return system("idris --client " . idriscmd)
+endfunction
+
+I'm going to put in a pull request for this. We'll see if they laugh me out of the room.
+
+Phase 4) installing packages
+Idris has commands for --build, --install, and --clean. I have tried this, and
+it certainly put files in what seem like the right places in the idris/lib or
+something, but I still can't seem to reference them.
+
+TODO: WTF how does this work. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

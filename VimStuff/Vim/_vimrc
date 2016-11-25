@@ -1,0 +1,14 @@
+source $VIMRUNTIME/vimrc_example.vim
+source $VIMRUNTIME/mswin.vim
+behave mswin
+set guifont=Consolas:h14:cANSI:qDRAFT
+
+set directory=C:/vimhelp/swap//
+set undodir=C:/vimhelp/undo//
+set backupdir=C:/vimhelp/backup//
+
+syntax on
+filetype on
+filetype plugin indent on
+
+colorscheme industry

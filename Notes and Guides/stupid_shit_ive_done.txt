@@ -1,0 +1,12 @@
+Here are some fun thing I've lost time to
+
+The correct file extention is ".idr". It's not ".Idr" or "ird". 
+
+The idris installer works. Use "idris -p Lightyear" to load the Lightyear
+module. Do not use "idris -p lightyear". 
+
+vimscript isn't that hard. It's wierd, but it's easy enough to edit plugins. 
+
+File hierarchy is linked to import statements.
+
+
