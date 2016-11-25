@@ -3,17 +3,17 @@ import Error
 import Control.Monad.State
 import Data.Vect
 
-%access public export
+%access export
 data FailureReason = FailByAssertion 
                    | Timeout
  
 record TestFailure where
   constructor TestFail
-  Reason: FailureReason
-  FailString : String 
+  reason: FailureReason
+  failStr : String 
 
 TestM: Type -> Type
-TestM = ErrorM {e=TestFailure}
+TestM = ErrorM TestFailure
 
 AssertFail: String -> TestM a
 AssertFail s = Fail (TestFail FailByAssertion s)
@@ -32,24 +32,47 @@ AssertFalse b err = AssertTrue (not b) err
 
 record TestRunState where
   constructor StartRun
-  passCount:Int
-  failures: (n:Nat ** Vect n (string, string))
+  passCount: Nat
+  failures: (n:Nat ** Vect n (String, String))
+
+InitRun:TestRunState
+InitRun= StartRun Z (Z ** [])
 
 TestState:Type -> Type
 TestState a = State TestRunState a
 
-WTFTestM : TestM a -> TestFailure 
-WTFTestM (Success x) = ?WTFTestM_rhs_1
-WTFTestM (Fail x) = x
+private
+TestSuccess: TestRunState -> TestRunState
+TestSuccess r = record {passCount $= S} r   
 
-RunTest: (String,TestM a) -> TestState ()
-RunTest (name, test) = 
-  do y <- get
-     let newState:TestRunState = 
-       case test of
-            Success succ => record {passCount $= (+1)} y
-            Fail fl => y
-     put $ newState
-   
+private
+TestFailed: (name:String) -> (failstr:String) -> TestRunState -> TestRunState
+TestFailed name failstr state = 
+  let (_ ** fails) = failures state in
+  let nextFail = (name, failstr) in
+      record {failures = (_ ** nextFail :: fails)} state 
 
-    
+RunTest: String -> TestM a -> TestState ()
+RunTest name (Success _) = put $ TestSuccess !get
+RunTest name (Fail f) = put $ TestFailed name (failStr f) !get
+
+TotalTests: TestState Nat
+TotalTests =  do s <- get
+                 let passes = passCount s
+                 let fails = fst $ failures s
+                 pure $ passes + fails
+
+NoTestRunZ: evalState TotalTests InitRun = Z
+NoTestRunZ = ?NoTestRunZ_rhs
+
+
+
+
+
+
+
+
+
+
+
+
