@@ -1,5 +1,6 @@
 module Error
 
+import Control.Monad.Identity
 import Control.Monad.Trans
 import Data.Fin
 %access public export
@@ -14,15 +15,20 @@ eitherLiftFunc f e = case (f,e) of
                       (_, Left a) => Left a
                       (Right f, Right b) => Right (f b)
 
-||| A computation which short circuits on thrown errors.
-interface Monad m => MonadExcept errType (m:Type -> Type)| m where 
-  |||throw an error causing the operation to short circuit.
-  throw : errType -> m ()
-  |||determine the current state of the operation.
-  read : m a -> Either errType a
-
 data ExceptT : (errType : Type) ->  (m : Type -> Type) -> (a : Type) -> Type where
   MkExcept : m (Either errType a) -> ExceptT errType m a
+
+throw : Applicative m => e -> ExceptT e m a 
+throw e = MkExcept( pure ( Left e))
+
+run : ExceptT e f a -> f (Either e a)
+run x = let (MkExcept y) = x in y
+
+catch : Monad m => ExceptT e m a -> (e -> ExceptT e m a ) -> ExceptT e m a
+catch x f = MkExcept( do y <- run x
+                         case y of
+                              Left a => run $ f a
+                              Right b => pure $ Right b)
 
 implementation Functor f => Functor (ExceptT errType f) where
   map fn (MkExcept ex) =
@@ -37,14 +43,11 @@ implementation Monad m => Monad (ExceptT errType m) where
   (MkExcept x) >>= f = MkExcept $ do y <- x
                                      case y of 
                                           Left a => pure (Left a)
-                                          Right b => let (MkExcept c) = f b in c
----- 
---implementation Monad m => MonadExcept errType (ExceptT errType m) where
---  throw e = Fail e 
---  read (Fail errVal) = Left errVal
---  read (Success sVal) = Right sVal
---
---
---
---
---
+                                          Right b => run $ f b 
+
+implementation MonadTrans (ExceptT e) where
+  lift x = MkExcept ( do y <- x
+                         pure $ Right y)
+
+Except : Type -> Type -> Type 
+Except e a = ExceptT e Identity a
