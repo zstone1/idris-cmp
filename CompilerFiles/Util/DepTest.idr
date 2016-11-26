@@ -2,6 +2,7 @@ module TestHarness
 import Error
 import Control.Monad.State
 import Data.Vect
+import Data.So
 
 %access export
 data FailureReason = FailByAssertion 
@@ -9,7 +10,7 @@ data FailureReason = FailByAssertion
  
 record TestFailure where
   constructor TestFail
-  reason: FailureReason
+  reason : FailureReason
   failStr : String 
 
 TestM: Type -> Type
@@ -18,31 +19,30 @@ TestM = ErrorM TestFailure
 AssertFail: String -> TestM a
 AssertFail s = Fail (TestFail FailByAssertion s)
 
-Assert: (f:a->Bool) -> a -> String -> TestM a
-Assert pred x err =
-  if pred x 
-  then Success x 
-  else AssertFail err
+Assert: (f:a->Bool) -> (x:a) -> String -> TestM (So (f x))
+Assert pred x err with (pred x)
+  | True = Success Oh 
+  | False = AssertFail err
 
-AssertTrue: Bool -> String -> TestM()
+AssertTrue: (b:Bool) -> String -> TestM(So b)
 AssertTrue b err = Assert (\e=>b) () err
 
-AssertFalse: Bool -> String -> TestM()
+AssertFalse: (b:Bool) -> String -> TestM(So (not b))
 AssertFalse b err = AssertTrue (not b) err
 
 record TestRunState where
   constructor StartRun
-  passCount: Nat
-  failures: (n:Nat ** Vect n (String, String))
+  passCount : Nat
+  failures : (n:Nat ** Vect n (String, String))
 
 InitRun:TestRunState
-InitRun= StartRun Z (Z ** [])
+InitRun = StartRun Z (Z ** [])
 
 TestState:Type -> Type
 TestState a = State TestRunState a
 
 private
-TestSuccess: TestRunState -> TestRunState
+TestSuccess : TestRunState -> TestRunState
 TestSuccess r = record {passCount $= S} r   
 
 private
@@ -53,8 +53,8 @@ TestFailed name failstr state =
       record {failures = (_ ** nextFail :: fails)} state 
 
 RunTest: String -> TestM a -> TestState ()
-RunTest name (Success _) = put $ TestSuccess !get
-RunTest name (Fail f) = put $ TestFailed name (failStr f) !get
+RunTest name (Success _) = modify TestSuccess
+RunTest name (Fail f) = modify $ TestFailed name (failStr f)
 
 TotalTests: TestState Nat
 TotalTests =  do s <- get
