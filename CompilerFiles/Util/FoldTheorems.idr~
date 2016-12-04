@@ -1,5 +1,7 @@
+module FoldTheorems
 import Data.Vect
 %default total
+%access export
 |||A proof that given three element, f associates over them.
 Associates: (f : t -> t -> t) -> Type 
 Associates {t} f = (t1:t) -> (t2:t) -> (t3:t) -> (f ( f t1 t2) t3 = f t1 (f t2 t3))
@@ -64,6 +66,30 @@ SumAssociates : (as : Vect n Nat) -> (bs: Vect m Nat) -> (sum as + sum bs = sum 
 SumAssociates as bs = 
   let assoc = \a,b,c => sym $ plusAssociative a b c in
       FoldAssocConcat {f=\a,b => plus a b}{s=Z} assoc plusZeroLeftNeutral as bs
+
+MapAppendDistributes : (as : Vect n t) -> (bs : Vect n t) -> (map f as) ++ (map f bs) = map f (as ++ bs)
+MapAppendDistributes [] bs = Refl
+MapAppendDistributes (x :: xs) bs = ?MapAppendDistributes_rhs_2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

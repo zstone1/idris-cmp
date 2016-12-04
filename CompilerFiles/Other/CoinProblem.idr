@@ -1,5 +1,6 @@
 module CoinProblem
 import Data.Vect
+import Util.VectTheorems
 
 data Denoms : {k:Nat} -> Type where
   MkDenoms : (d:Vect n Nat) -> {auto e: Elem 1 d} -> Denoms {k=n}
