@@ -91,24 +91,29 @@ minusPlusCancel k Z = rewrite minusZeroRight k in Refl
 minusPlusCancel Z (S j) {q} = absurd q
 minusPlusCancel (S k) (S j) {q} = cong $ minusPlusCancel k j {q = fromLteSucc q}
 
+lteMinus : (n:Nat) ->(m :Nat) -> {auto q1 : LT 0 n} -> {auto q2 : LTE n m} -> LT (m - n) m
+lteMinus Z _ {q1} = absurd q1
+lteMinus (S k) Z {q2} = absurd q2
+lteMinus (S Z) (S j) = rewrite minusZeroRight j in (LTESucc lteRefl )
+lteMinus (S (S k)) (S j) {q2} = let LTESucc f =q2 in
+                                  LTESucc $ lteSuccLeft $ (lteMinus (S k) j) 
 
 GiveChange : (cur : Currency) -> (amt: Nat) -> Change cur amt
-GiveChange cur amt with (isElem amt (getDenoms cur))
-  | Yes prf = GiveChangeElem cur amt prf 
-  | No contr = let (_ ** allVals) = AllChangeValues amt contr in minElem fewestCoins allVals where
-       AllChangeValues : (n :Nat) -> (Not $ Elem n (getDenoms cur)) -> (p:Nat ** Vect (S p) (Change cur n))
-       AllChangeValues Z _ = (_ ** [GiveChange cur Z])
-       AllChangeValues (S Z) notDenom = absurd $ notDenom $ hasOne $ getConstraints cur
-       AllChangeValues (S(S(k))) _ = let (l ** cands) = filterCandidates cur (S(S(k))) in
-                                         (l ** map handleDenom cands) where
-         handleDenom : (candDenom cur (S(S(k)))) -> Change cur (S(S(k)))
-         handleDenom (n ** (ZLtn, nLtSsk, nInCur)) = 
-            let c1 = GiveChange cur n in
-            let nLteSsk = lteSuccLeft nLtSsk in
-            let c2 = GiveChange cur (S(S(k)) - n) in
-            let prf : (S(S(k)) = n + (S(S(k)) - n)) = minusPlusCancel (S(S(k))) n in 
-              rewrite prf in MergeChange c1 c2 
-        
+GiveChange cur Z = MkChange Z [] (ValidateChange Refl) 
+GiveChange cur (S Z) = GiveChangeElem cur (S Z) (hasOne $ getConstraints cur)
+GiveChange cur (S(S(k))) with (isElem (S(S(k))) (getDenoms cur))
+  | Yes prf = GiveChangeElem cur (S(S(k))) prf 
+  | No contr = let (l ** cands) = filterCandidates cur (S(S(k))) in
+               let changeChoices = map (handleDenom (S(S(k)))) cands in 
+                   minElem fewestCoins changeChoices where
+                  handleDenom : (amt: Nat) -> candDenom cur amt -> Change cur amt
+                  handleDenom amt (n ** (zLtn, nLtAmt, nInCur)) = 
+                     let nLteAmt = lteSuccLeft nLtAmt in
+                     let diffLtAmt = lteMinus n amt in
+                     let c1 = GiveChange cur n in
+                     let c2 = GiveChange cur (amt - n) in
+                       rewrite minusPlusCancel amt n in MergeChange c1 c2 
+                 
   
 USCurrency : Currency {k=4}
 USCurrency = MkCurrency [1,5,10,25]
