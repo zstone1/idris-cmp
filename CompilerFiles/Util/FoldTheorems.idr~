@@ -67,19 +67,18 @@ SumAssociates as bs =
   let assoc = \a,b,c => sym $ plusAssociative a b c in
       FoldAssocConcat {f=\a,b => plus a b}{s=Z} assoc plusZeroLeftNeutral as bs
 
-MapAppendDistributes : (as : Vect n t) -> (bs : Vect n t) -> (map f as) ++ (map f bs) = map f (as ++ bs)
-MapAppendDistributes [] bs = Refl
-MapAppendDistributes (x :: xs) bs = ?MapAppendDistributes_rhs_2
+MapAppendDistributes : (f: t->u) -> (as : Vect n t) -> (bs : Vect m t) -> (map f as) ++ (map f bs) = map f (as ++ bs)
+MapAppendDistributes f [] bs = Refl
+MapAppendDistributes f (x :: xs) bs = 
+  let induct = MapAppendDistributes f xs bs in
+    rewrite induct in Refl 
 
 
+NotElemLemma1 : Elem inList as -> Not $ Elem outList as -> (inList = outList) -> Void
+NotElemLemma1 isIn isOut contra = isOut $ rewrite sym contra in isIn 
 
-
-
-
-
-
-
-
+Min : (ord : t -> t -> Ordering) -> Vect (S k) t -> t
+Min ord (x :: xs) = ?Min_rhs_1
 
 
 

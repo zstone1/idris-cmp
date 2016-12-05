@@ -74,14 +74,17 @@ MapAppendDistributes f (x :: xs) bs =
     rewrite induct in Refl 
 
 
+NotElemLemma1 : Elem inList as -> Not $ Elem outList as -> (inList = outList) -> Void
+NotElemLemma1 isIn isOut contra = isOut $ rewrite sym contra in isIn 
 
-
-
-
-
-
-
-
+minElem : (ord : t -> t -> Ordering) -> Vect (S k) t -> t
+minElem ord (x :: []) = x
+minElem ord (x :: y :: xs) = 
+  let next = minElem ord (y :: xs) in
+      case ord x next of 
+           LT => x
+           GT => next
+           EQ => x
 
 
 

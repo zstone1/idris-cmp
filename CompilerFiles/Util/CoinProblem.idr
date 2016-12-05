@@ -1,7 +1,9 @@
 module CoinProblem
 import Data.Vect
 import FoldTheorems
-%default total
+
+
+
 record CurrencyConstraints (d : Vect k Nat) where
   constructor ValidateCurrency
   hasOne : Elem 1 d
@@ -66,23 +68,52 @@ MergeChange (MkChange {amt = amt1} _ a1 const1) (MkChange {amt = amt2} _ a2 cons
   let sumCheckB : (amt1 + amt2 = cSum (a1 ++ a2)) = rewrite sym $ CSumDistr a1 a2 in sumCheckA in
     MkChange _ (a1 ++ a2) (ValidateChange sumCheckB) 
 
-GiveChange : (cur : Currency) -> (amt: Nat) -> Change cur amt
-GiveChange _ Z = MkChange Z [] (ValidateChange Refl)
-GiveChange cur (S k) with (isElem (S k) (getDenoms cur))
-  | Yes prf = let c = MkCoin (S k) cur in 
-              let p1 : (plus (S k) 0 = cSum [c]) = Refl in
-              let p2 : ((S k) = cSum [c]) = (rewrite sym $ plusZeroRightNeutral (S k) in p1) in 
-                MkChange 1 [c] (ValidateChange p2)
-  | No contr = let one = hasOne $ getConstraints cur in 
-               let c = MkCoin 1 cur {q=one} in
-               let one =  MkChange (S Z) [c] (ValidateChange Refl) in
-               let rec = GiveChange cur k in
-                 MergeChange one rec
+|||Does the obvious then when the amount of change is a value for a coin.
+total
+GiveChangeElem : (cur : Currency) -> (amt : Nat) -> (Elem amt (getDenoms cur)) -> Change cur amt
+GiveChangeElem cur amt prf = 
+  let c = MkCoin amt cur in 
+    MkChange _ [c] (ValidateChange (rewrite plusZeroRightNeutral amt in Refl))
 
+fewestCoins : Change cur amt -> Change cur amt -> Ordering 
+fewestCoins (MkChange n1 _ _) (MkChange n2 _ _) = compare n1 n2
+
+candDenom : Currency -> Nat -> Type
+candDenom cur amt = (n:Nat ** (LT 0 n, LT n amt, Elem n (getDenoms cur))) 
+
+filterCandidates : (cur : Currency) -> 
+                   (amt : Nat) -> 
+                   {auto q :(LTE 2 amt)} -> 
+                   (p:Nat ** Vect (S p) (candDenom cur amt))
+
+minusPlusCancel : (k : Nat) -> (n : Nat) -> {auto q: LTE n k} ->(k = (n +(k - n)))
+minusPlusCancel k Z = rewrite minusZeroRight k in Refl
+minusPlusCancel Z (S j) {q} = absurd q
+minusPlusCancel (S k) (S j) {q} = cong $ minusPlusCancel k j {q = fromLteSucc q}
+
+
+GiveChange : (cur : Currency) -> (amt: Nat) -> Change cur amt
+GiveChange cur amt with (isElem amt (getDenoms cur))
+  | Yes prf = GiveChangeElem cur amt prf 
+  | No contr = let (_ ** allVals) = AllChangeValues amt contr in minElem fewestCoins allVals where
+       AllChangeValues : (n :Nat) -> (Not $ Elem n (getDenoms cur)) -> (p:Nat ** Vect (S p) (Change cur n))
+       AllChangeValues Z _ = (_ ** [GiveChange cur Z])
+       AllChangeValues (S Z) notDenom = absurd $ notDenom $ hasOne $ getConstraints cur
+       AllChangeValues (S(S(k))) _ = let (l ** cands) = filterCandidates cur (S(S(k))) in
+                                         (l ** map handleDenom cands) where
+         handleDenom : (candDenom cur (S(S(k)))) -> Change cur (S(S(k)))
+         handleDenom (n ** (ZLtn, nLtSsk, nInCur)) = 
+            let c1 = GiveChange cur n in
+            let nLteSsk = lteSuccLeft nLtSsk in
+            let c2 = GiveChange cur (S(S(k)) - n) in
+            let prf : (S(S(k)) = n + (S(S(k)) - n)) = minusPlusCancel (S(S(k))) n in 
+              rewrite prf in MergeChange c1 c2 
+        
+  
 USCurrency : Currency {k=4}
 USCurrency = MkCurrency [1,5,10,25]
 
-Foo : String 
-Foo = show $ (GiveChange USCurrency 12)
+Foo : Nat -> String 
+Foo e= show $ (GiveChange USCurrency e)
  
 
