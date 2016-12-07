@@ -1,13 +1,14 @@
 module CoinProblem
 import Data.Vect
 import FoldTheorems
-
+%default total
 
 
 record CurrencyConstraints (d : Vect k Nat) where
   constructor ValidateCurrency
   hasOne : Elem 1 d
-
+  --TODO: include claim that Not $ Elem 0 d
+  
 Currency : {k:Nat} -> Type
 Currency {k}= (d : Vect k Nat ** CurrencyConstraints {k=k} d) 
 
@@ -15,7 +16,7 @@ MkCurrency : (d : Vect k Nat) -> {auto q : Elem 1 d} -> Currency {k=k}
 MkCurrency d {q} = (d ** ValidateCurrency q)
 
 getDenoms : Currency {k=k} -> Vect k Nat
-getDenoms x = fst x
+getDenoms = fst
 
 getConstraints : (cur : Currency {k=k}) -> CurrencyConstraints (getDenoms cur)
 getConstraints = snd
@@ -39,13 +40,9 @@ cSum coins = sum (map getVal coins)
 |||Proof that cSum distributes like sum.
 CSumDistr : (as : Vect n (Coin d)) -> (bs : Vect m (Coin d)) -> cSum as + cSum bs = cSum (as ++ bs)
 CSumDistr as bs = 
-    let as' = map getVal as in
-    let bs' = map getVal bs in
-    let asbs' = map getVal (as ++ bs) in 
-    let l1 : (sum as' + sum bs' = sum (as' ++ bs')) = SumAssociates as' bs' in
-    let p2 : (as' ++ bs' = asbs') = MapAppendDistributes getVal as bs in
-    let l4 : (sum as' + sum bs' = sum (asbs')) = rewrite sym p2 in l1 in
-        l4
+    let l1 = SumAssociates (map getVal as) (map getVal bs) in
+    let p2 = sym $ MapAppendDistributes getVal as bs in
+    let l4 : ( _ = sum (map getVal (as ++ bs))) = rewrite p2 in l1 in l4
 
 record ChangeConstraints (cur : Currency{k=k}) (amt :Nat) (a: Vect n (Coin cur)) where
   constructor ValidateChange
@@ -62,9 +59,7 @@ implementation Show (Change cur amt) where
 MergeChange : (c1 : Change cur n) -> (c2 : Change cur m) -> Change cur (n + m)
 MergeChange (MkChange {amt = amt1} _ a1 const1) (MkChange {amt = amt2} _ a2 const2) = 
   let (amt1Check, amt2Check) = (amtCheck const1, amtCheck const2) in
-  let sumCheckA : (amt1 + amt2 = cSum a1 + cSum a2) = 
-    rewrite amt1Check in
-    rewrite amt2Check in Refl in
+  let sumCheckA = MergeEqualities amt1Check amt2Check in
   let sumCheckB : (amt1 + amt2 = cSum (a1 ++ a2)) = rewrite sym $ CSumDistr a1 a2 in sumCheckA in
     MkChange _ (a1 ++ a2) (ValidateChange sumCheckB) 
 
@@ -78,47 +73,59 @@ GiveChangeElem cur amt prf =
 fewestCoins : Change cur amt -> Change cur amt -> Ordering 
 fewestCoins (MkChange n1 _ _) (MkChange n2 _ _) = compare n1 n2
 
-candDenom : Currency -> Nat -> Type
-candDenom cur amt = (n:Nat ** (LT 0 n, LT n amt, Elem n (getDenoms cur))) 
+candDenom : Nat -> Type
+candDenom amt = (n:Nat ** (LT 0 n, LT n amt)) 
 
-filterCandidates : (cur : Currency) -> 
+
+filterCand : (amt: Nat) -> (cand: Nat) -> Maybe $ candDenom amt
+filterCand amt cand with ((isLTE 1 cand, isLTE (S cand) amt))
+  |( No _, _ )= Nothing
+  |( _, No _ )= Nothing
+  |( Yes prf1, Yes prf2 ) =  Just (cand ** (prf1, prf2))
+
+                                 
+filterCandidates : {j:Nat} -> (cur : Currency {k=j}) -> 
                    (amt : Nat) -> 
-                   {auto q :(LTE 2 amt)} -> 
-                   (p:Nat ** Vect (S p) (candDenom cur amt))
+                   {auto q1 : (LTE 1 amt)} ->
+                   {auto q2 : (Not$ Elem amt (getDenoms cur))} ->
+                   (p:Nat ** Vect (S p) (candDenom amt))
+filterCandidates cur Z {q1} = absurd q1
+filterCandidates cur (S Z) {q2} = void $ NotElemLemma1 (hasOne $ getConstraints cur) q2 Refl
+filterCandidates {q2} (xss ** constr) (S(S k)) {j} with (hasOne constr) 
+  filterCandidates {q2} (((S Z)::xs) ** _) (S(S k)) | Here = 
+    let c : (candDenom (S(S k))) = (S Z ** (LTESucc LTEZero, LTESucc $ LTESucc $ LTEZero {right = k})) in
+    let (l ** rest) = mapMaybe (filterCand (S(S k))) xs in
+      ( _ ** c::rest) 
+  filterCandidates {q2} (x::xs ** _ ) (S(S k)) | There next = 
+    let prf1 = NotElemLemma2 q2 in
+    let (l ** next) = filterCandidates (xs ** ValidateCurrency next) (S(S k)) {q2 = prf1} in
+      case filterCand (S(S k)) x of
+           Nothing => (_ ** next)
+           Just x => (_ ** x :: next)
 
-minusPlusCancel : (k : Nat) -> (n : Nat) -> {auto q: LTE n k} ->(k = (n +(k - n)))
-minusPlusCancel k Z = rewrite minusZeroRight k in Refl
-minusPlusCancel Z (S j) {q} = absurd q
-minusPlusCancel (S k) (S j) {q} = cong $ minusPlusCancel k j {q = fromLteSucc q}
-
-lteMinus : (n:Nat) ->(m :Nat) -> {auto q1 : LT 0 n} -> {auto q2 : LTE n m} -> LT (m - n) m
-lteMinus Z _ {q1} = absurd q1
-lteMinus (S k) Z {q2} = absurd q2
-lteMinus (S Z) (S j) = rewrite minusZeroRight j in (LTESucc lteRefl )
-lteMinus (S (S k)) (S j) {q2} = let LTESucc f =q2 in
-                                  LTESucc $ lteSuccLeft $ (lteMinus (S k) j) 
-
-GiveChange : (cur : Currency) -> (amt: Nat) -> Change cur amt
-GiveChange cur Z = MkChange Z [] (ValidateChange Refl) 
-GiveChange cur (S Z) = GiveChangeElem cur (S Z) (hasOne $ getConstraints cur)
-GiveChange cur (S(S(k))) with (isElem (S(S(k))) (getDenoms cur))
-  | Yes prf = GiveChangeElem cur (S(S(k))) prf 
-  | No contr = let (l ** cands) = filterCandidates cur (S(S(k))) in
-               let changeChoices = map (handleDenom (S(S(k)))) cands in 
-                   minElem fewestCoins changeChoices where
-                  handleDenom : (amt: Nat) -> candDenom cur amt -> Change cur amt
-                  handleDenom amt (n ** (zLtn, nLtAmt, nInCur)) = 
-                     let nLteAmt = lteSuccLeft nLtAmt in
-                     let diffLtAmt = lteMinus n amt in
-                     let c1 = GiveChange cur n in
-                     let c2 = GiveChange cur (amt - n) in
-                       rewrite minusPlusCancel amt n in MergeChange c1 c2 
-                 
+GiveChange : (cur : Currency) -> (amt: Nat) -> (welf : Nat) ->{auto q : LTE amt welf} -> Change cur amt
+GiveChange cur Z _ = MkChange Z [] (ValidateChange Refl) 
+GiveChange cur (S k) Z {q} = absurd q
+GiveChange cur (S k) (S welf) {q = LTESucc q'} with (isElem (S k) (getDenoms cur))
+  | Yes prf = GiveChangeElem cur (S k) prf 
+  | No contr = 
+    let (l ** cands) = filterCandidates {q2= contr} cur (S k) in
+    let changeChoices = map handleDenom cands in 
+        minElem fewestCoins changeChoices where 
+          handleDenom : candDenom (S k) -> Change cur (S k)
+          handleDenom (n ** (zLtn, LTESucc nLtek)) =
+            let q1 : (n `LTE` S k) = lteSuccRight nLtek in
+            let q2 : (n `LTE` welf) = lteTransitive nLtek q' in
+            let q3 : ((S k)-n `LTE` welf) = let LTESucc f = lteMinus (S k) n in lteTransitive f q' in
+            let c1 = GiveChange cur n welf in
+            let c2 = GiveChange cur ((S k) -n) welf in
+                rewrite minusPlusCancel (S k) n in MergeChange c1 c2 
+                        
   
 USCurrency : Currency {k=4}
 USCurrency = MkCurrency [1,5,10,25]
 
 Foo : Nat -> String 
-Foo e= show $ (GiveChange USCurrency e)
+Foo e= show $ (GiveChange USCurrency e e {q = lteRefl})
  
 

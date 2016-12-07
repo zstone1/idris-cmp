@@ -1,13 +1,14 @@
 module CoinProblem
 import Data.Vect
 import FoldTheorems
-
+%default total
 
 
 record CurrencyConstraints (d : Vect k Nat) where
   constructor ValidateCurrency
   hasOne : Elem 1 d
-
+  --TODO: include claim that Not $ Elem 0 d
+  
 Currency : {k:Nat} -> Type
 Currency {k}= (d : Vect k Nat ** CurrencyConstraints {k=k} d) 
 
@@ -78,46 +79,76 @@ GiveChangeElem cur amt prf =
 fewestCoins : Change cur amt -> Change cur amt -> Ordering 
 fewestCoins (MkChange n1 _ _) (MkChange n2 _ _) = compare n1 n2
 
-candDenom : Currency -> Nat -> Type
-candDenom cur amt = (n:Nat ** (LT 0 n, LT n amt, Elem n (getDenoms cur))) 
+candDenom : Nat -> Type
+candDenom amt = (n:Nat ** (LT 0 n, LT n amt)) 
 
-filterCandidates : (cur : Currency) -> 
+
+filterCand : (amt: Nat) -> (cand: Nat) -> Maybe $ candDenom amt
+filterCand amt cand with (isLTE 1 cand)
+  |No prf = Nothing
+  |Yes prf =  Just (cand ** (?filterCand_rhs1, ?filterCand_rhs2))
+
+
+foo : (d : Vect j Nat) -> 
+      (one : Elem (S Z) d) -> 
+      (p : Nat ** Vect (S p) (candDenom (S(S k))))
+foo {k} {j = S l} (S Z :: ds) Here =
+  let c : (candDenom (S(S k))) = (S Z ** (LTESucc LTEZero, LTESucc $ LTESucc $ LTEZero {right = k})) in
+  let (l ** rest) = mapMaybe (filterCand (S(S k))) ds in
+    ( l ** c::rest) 
+foo (d::ds) (There next) {k} with( filterCand (S(S k)) d) 
+    | Nothing = foo ds next {k=k} 
+    | Just x = ( _ ** x :: (snd $ foo ds next {k=k}))
+                                                              
+filterCandidates : {j:Nat} -> (cur : Currency {k=j}) -> 
                    (amt : Nat) -> 
-                   {auto q :(LTE 2 amt)} -> 
-                   (p:Nat ** Vect (S p) (candDenom cur amt))
+                   {auto q1 : (LTE 1 amt)} ->
+                   {auto q2 : (Not$ Elem amt (getDenoms cur))} ->
+                   (p:Nat ** Vect (S p) (candDenom amt))
+filterCandidates cur Z {q1} = absurd q1
+filterCandidates cur (S Z) {q2} = void $ NotElemLemma1 (hasOne $ getConstraints cur) q2 Refl
+filterCandidates cur (S(S k)) {j} =  let one = (hasOne $ getConstraints cur) in 
+                                              (foo {j=j} (getDenoms cur) one)
+
+
+
 
 minusPlusCancel : (k : Nat) -> (n : Nat) -> {auto q: LTE n k} ->(k = (n +(k - n)))
 minusPlusCancel k Z = rewrite minusZeroRight k in Refl
 minusPlusCancel Z (S j) {q} = absurd q
 minusPlusCancel (S k) (S j) {q} = cong $ minusPlusCancel k j {q = fromLteSucc q}
 
-lteMinus : (n:Nat) ->(m :Nat) -> {auto q1 : LT 0 n} -> {auto q2 : LTE n m} -> LT (m - n) m
-lteMinus Z _ {q1} = absurd q1
-lteMinus (S k) Z {q2} = absurd q2
-lteMinus (S Z) (S j) = rewrite minusZeroRight j in (LTESucc lteRefl )
-lteMinus (S (S k)) (S j) = LTESucc ?go2
+lteMinus : (m:Nat) ->(n :Nat) -> {auto q1 : LTE 1 n} -> {auto q2 : LTE n m} -> LT (m - n) m
+lteMinus _ Z {q1} = absurd q1
+lteMinus Z (S k) {q2} = absurd q2
+lteMinus (S j) (S Z) = rewrite minusZeroRight j in (LTESucc lteRefl )
+lteMinus (S k) (S(S j)) {q2} = let LTESucc f = q2 in
+                                   LTESucc $ lteSuccLeft $ (lteMinus k (S j))
 
-GiveChange : (cur : Currency) -> (amt: Nat) -> Change cur amt
-GiveChange cur Z = MkChange Z [] (ValidateChange Refl) 
-GiveChange cur (S Z) = GiveChangeElem cur (S Z) (hasOne $ getConstraints cur)
-GiveChange cur (S(S(k))) with (isElem (S(S(k))) (getDenoms cur))
-  | Yes prf = GiveChangeElem cur (S(S(k))) prf 
-  | No contr = let (l ** cands) = filterCandidates cur (S(S(k))) in
-               let changeChoices = map (handleDenom (S(S(k)))) cands in 
-                   minElem fewestCoins changeChoices where
-                  handleDenom : (amt: Nat) -> candDenom cur amt -> Change cur amt
-                  handleDenom amt (n ** (zLtn, nLtAmt, nInCur)) = 
-                     let nLteSsk = lteSuccLeft nLtAmt in
-                     let diffLtAmt : LT (amt - n) amt = lteMinus n amt in
-                     let c1 = GiveChange cur n in
-                     let c2 = GiveChange cur (amt -n) in
-                       rewrite minusPlusCancel amt n in MergeChange c1 c2 
-                 
+total
+GiveChange : (cur : Currency) -> (amt: Nat)  -> (inv : Nat) ->{auto q : LTE amt inv} -> Change cur amt
+GiveChange cur Z _ = MkChange Z [] (ValidateChange Refl) 
+GiveChange cur (S k) Z {q} = absurd q
+GiveChange cur (S k) (S j) {q = LTESucc q'} with (isElem (S k) (getDenoms cur))
+  | Yes prf = GiveChangeElem cur (S k) prf 
+  | No contr = 
+    let (l ** cands) = filterCandidates {q2= contr} cur (S k) in
+    let changeChoices = map handleDenom cands in 
+        minElem fewestCoins changeChoices where 
+          handleDenom : candDenom (S k) -> Change cur (S k)
+          handleDenom (n ** (zLtn, LTESucc nLtek)) =
+            let q1 : (n `LTE` S k) = lteSuccRight nLtek in
+            let q2 : (n `LTE` j) = lteTransitive nLtek q' in
+            let q3 : ((S k)-n `LTE` j) = let LTESucc f = lteMinus (S k) n in lteTransitive f q' in
+            let c1 = GiveChange cur n j in
+            let c2 = GiveChange cur ((S k) -n) j in
+                rewrite minusPlusCancel (S k) n in MergeChange c1 c2 
+                        
   
 USCurrency : Currency {k=4}
 USCurrency = MkCurrency [1,5,10,25]
 
-Foo : Nat -> String 
-Foo e= show $ (GiveChange USCurrency e)
+--Foo : Nat -> String 
+--Foo e= show $ (GiveChange USCurrency e)
  
 
