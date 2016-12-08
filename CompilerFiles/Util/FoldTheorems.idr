@@ -1,5 +1,6 @@
 module FoldTheorems
 import Data.Vect
+import Decidable.Order  
 %default total
 %access export
 |||A proof that given three element, f associates over them.
@@ -84,14 +85,36 @@ NotElemLemma2 : Not $ Elem a (x::xs) -> Elem a xs -> Void
 NotElemLemma2 {a} {xs = a :: xs'} contr Here = contr $ There Here
 NotElemLemma2 {xs = y :: xs'} contr (There later) = contr $ There( There( later))
 
-minElem : (ord : t -> t -> Ordering) -> Vect (S k) t -> t
-minElem ord (x :: []) = x
-minElem ord (x :: y :: xs) = 
-  let next = minElem ord (y :: xs) in
-      case ord x next of 
-           LT => x
-           GT => next
-           EQ => x
+
+minElem : Ordered t to => Vect (S k) t -> t
+minElem (x :: []) = x
+minElem {to} (x :: x'::xs) = minimum {to=to} x (minElem {to=to} (x'::xs) )
+
+minElemLemma1 : Ordered t to => (x:t) -> (xs : Vect k t) -> (to (minElem {to=to} (x::xs)) x)
+minElemLemma1 x [] = reflexive x
+minElemLemma1 {to} x (y :: xs) with (order {to=to} x (minElem {to=to} (y::xs))) 
+  |Left p = reflexive x
+  |Right p2 = p2
+
+
+minElemLemma2 : Ordered t to =>  (x:t) -> (xs: Vect (S k) t) -> to (minElem {to=to}(x::xs)) (minElem {to=to} xs)
+minElemLemma2 {to} {k=Z} x (x' :: []) with (order {to=to} x x') 
+  |Left p = p
+  |Right p = reflexive x'
+minElemLemma2 {to} {k=S j} x (x' :: xs) with (order {to=to} x (minElem {to=to} (x'::xs)))
+  |Left p = p 
+  |Right p = reflexive (minElem {to=to} (x'::xs))
+
+minElemPrf : Ordered t to => (l: Vect (S k) t) -> ( Elem x l ) -> to (minElem {to=to} l) x
+minElemPrf {x = y} {to} (y :: []) Here = reflexive y
+minElemPrf {x = x} (y :: []) (There later) = absurd later
+minElemPrf {x = y} {to} (y :: y' :: ys) Here with (order {to=to} y (minElem {to=to} (y'::ys))) 
+  |Left _ = reflexive y
+  |Right p = p
+minElemPrf {x} {to} (y :: y' :: ys) (There later) with (order {to=to} y (minElem {to=to} (y'::ys)))
+  |Left p = let rec = minElemPrf {x=x} {to=to} (y'::ys) later in 
+               transitive y (minElem {to=to} (y'::ys)) x p rec 
+  |Right p = minElemPrf {x=x}{to=to} (y'::ys) later
 
 minusPlusCancel : (k : Nat) -> (n : Nat) -> {auto q: LTE n k} ->(k = (n +(k - n)))
 minusPlusCancel k Z = rewrite minusZeroRight k in Refl

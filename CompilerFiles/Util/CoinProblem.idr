@@ -90,10 +90,10 @@ filterCandidates : {j:Nat} -> (cur : Currency {k=j}) ->
                    {auto q2 : (Not$ Elem amt (getDenoms cur))} ->
                    (p:Nat ** Vect (S p) (candDenom amt))
 filterCandidates cur Z {q1} = absurd q1
-filterCandidates cur (S Z) {q2} = void $ NotElemLemma1 (hasOne $ getConstraints cur) q2 Refl
+filterCandidates (_**constr) (S Z) {q2} = void $ NotElemLemma1 (hasOne constr) q2 Refl
 filterCandidates {q2} (xss ** constr) (S(S k)) {j} with (hasOne constr) 
   filterCandidates {q2} (((S Z)::xs) ** _) (S(S k)) | Here = 
-    let c : (candDenom (S(S k))) = (S Z ** (LTESucc LTEZero, LTESucc $ LTESucc $ LTEZero {right = k})) in
+    let c : (candDenom (S(S k))) = (S Z ** (LTESucc LTEZero, LTESucc $ LTESucc $ LTEZero)) in
     let (l ** rest) = mapMaybe (filterCand (S(S k))) xs in
       ( _ ** c::rest) 
   filterCandidates {q2} (x::xs ** _ ) (S(S k)) | There next = 
