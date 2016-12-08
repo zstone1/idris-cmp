@@ -116,6 +116,15 @@ minElemPrf {x} {to} (y :: y' :: ys) (There later) with (order {to=to} y (minElem
                transitive y (minElem {to=to} (y'::ys)) x p rec 
   |Right p = minElemPrf {x=x}{to=to} (y'::ys) later
 
+
+
+
+minElemBy : Ordered t to => (u -> t) -> Vect (S k) u -> u
+minElemBy {t} {to} f xs = let pairs = map (\e => (e, f e)) xs in 
+                          let newTo : (Pair u t -> Pair u t -> Type) = (\e1,e2 => to (snd e1) (snd e2)) in 
+                          let min = minElem {to=newTo} pairs in
+                             ?foo 
+
 minusPlusCancel : (k : Nat) -> (n : Nat) -> {auto q: LTE n k} ->(k = (n +(k - n)))
 minusPlusCancel k Z = rewrite minusZeroRight k in Refl
 minusPlusCancel Z (S j) {q} = absurd q
