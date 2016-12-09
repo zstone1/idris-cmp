@@ -1,4 +1,5 @@
 module FoldTheorems
+import Projective
 import Data.Vect
 import Decidable.Order  
 %default total
@@ -86,44 +87,50 @@ NotElemLemma2 {a} {xs = a :: xs'} contr Here = contr $ There Here
 NotElemLemma2 {xs = y :: xs'} contr (There later) = contr $ There( There( later))
 
 
-minElem : Ordered t to => Vect (S k) t -> t
-minElem (x :: []) = x
-minElem {to} (x :: x'::xs) = minimum {to=to} x (minElem {to=to} (x'::xs) )
+minimum : (TotalPreorder t po) => t -> t -> t
+minimum {po} x y with (porder {po} x y)
+    | Left _ = x
+    | Right _ = y
 
-minElemLemma1 : Ordered t to => (x:t) -> (xs : Vect k t) -> (to (minElem {to=to} (x::xs)) x)
+
+minElem : TotalPreorder t po => Vect (S k) t -> t
+minElem (x :: []) = x
+minElem {po} (x :: x'::xs)  = minimum {po} x (minElem {po} (x'::xs)) 
+
+minElemLemma1 : TotalPreorder t po => (x:t) -> (xs : Vect k t) -> (po (minElem {po} (x::xs)) x)
 minElemLemma1 x [] = reflexive x
-minElemLemma1 {to} x (y :: xs) with (order {to=to} x (minElem {to=to} (y::xs))) 
+minElemLemma1 {po} x (y :: xs) with (porder {po} x (minElem {po} (y::xs))) 
   |Left p = reflexive x
   |Right p2 = p2
 
 
-minElemLemma2 : Ordered t to =>  (x:t) -> (xs: Vect (S k) t) -> to (minElem {to=to}(x::xs)) (minElem {to=to} xs)
-minElemLemma2 {to} {k=Z} x (x' :: []) with (order {to=to} x x') 
+minElemLemma2 : TotalPreorder t po =>  (x:t) -> (xs: Vect (S k) t) -> po (minElem {po}(x::xs)) (minElem {po} xs)
+minElemLemma2 {po} {k=Z} x (x' :: []) with (porder {po} x x') 
   |Left p = p
   |Right p = reflexive x'
-minElemLemma2 {to} {k=S j} x (x' :: xs) with (order {to=to} x (minElem {to=to} (x'::xs)))
+minElemLemma2 {po} {k=S j} x (x' :: xs) with (porder {po} x (minElem {po} (x'::xs)))
   |Left p = p 
-  |Right p = reflexive (minElem {to=to} (x'::xs))
+  |Right p = reflexive (minElem {po} (x'::xs))
 
-minElemPrf : Ordered t to => (l: Vect (S k) t) -> ( Elem x l ) -> to (minElem {to=to} l) x
-minElemPrf {x = y} {to} (y :: []) Here = reflexive y
+minElemPrf : TotalPreorder t po => (l: Vect (S k) t) -> ( Elem x l ) -> po (minElem {po} l) x
+minElemPrf {x = y} (y :: []) Here = reflexive y
 minElemPrf {x = x} (y :: []) (There later) = absurd later
-minElemPrf {x = y} {to} (y :: y' :: ys) Here with (order {to=to} y (minElem {to=to} (y'::ys))) 
+minElemPrf {x = y} {po} (y :: y' :: ys) Here with (porder {po} y (minElem {po} (y'::ys))) 
   |Left _ = reflexive y
   |Right p = p
-minElemPrf {x} {to} (y :: y' :: ys) (There later) with (order {to=to} y (minElem {to=to} (y'::ys)))
-  |Left p = let rec = minElemPrf {x=x} {to=to} (y'::ys) later in 
-               transitive y (minElem {to=to} (y'::ys)) x p rec 
-  |Right p = minElemPrf {x=x}{to=to} (y'::ys) later
+minElemPrf {x} {po} (y :: y' :: ys) (There later) with (porder {po} y (minElem {po} (y'::ys)))
+  |Left p = let rec = minElemPrf {x} {po} (y'::ys) later in 
+               transitive y (minElem {po} (y'::ys)) x p rec 
+  |Right p = minElemPrf {x}{po} (y'::ys) later
+--
+--
+minElemBy : TotalPreorder t po => (u -> t) -> Vect (S k) u -> u
+minElemBy {u} {t} {po} f xs = let pairs = map (\e => (e, f e)) xs in 
+                                 fst $ minElem {po=ProjLifted (Pair u) po} pairs
 
+minElemByLemma1 : TotalPreorder t po => (f: u -> t) -> (l:Vect (S k) u) -> (Elem x l) -> po ( minElem {po} (map f l)) (f x) 
+minElemByLemma1 {po} f xs elem = minElemPrf {po} (map f xs) (mapElem elem)
 
-
-
-minElemBy : Ordered t to => (u -> t) -> Vect (S k) u -> u
-minElemBy {t} {to} f xs = let pairs = map (\e => (e, f e)) xs in 
-                          let newTo : (Pair u t -> Pair u t -> Type) = (\e1,e2 => to (snd e1) (snd e2)) in 
-                          let min = minElem {to=newTo} pairs in
-                             ?foo 
 
 minusPlusCancel : (k : Nat) -> (n : Nat) -> {auto q: LTE n k} ->(k = (n +(k - n)))
 minusPlusCancel k Z = rewrite minusZeroRight k in Refl

@@ -1,4 +1,5 @@
 module CoinProblem
+import Projective
 import Data.Vect
 import FoldTheorems
 %default total
@@ -70,8 +71,8 @@ GiveChangeElem cur amt prf =
   let c = MkCoin amt cur in 
     MkChange _ [c] (ValidateChange (rewrite plusZeroRightNeutral amt in Refl))
 
-fewestCoins : Change cur amt -> Change cur amt -> Ordering 
-fewestCoins (MkChange n1 _ _) (MkChange n2 _ _) = compare n1 n2
+getCoins: Change cur amt -> Nat
+getCoins (MkChange n1 _ _) = n1 
 
 candDenom : Nat -> Type
 candDenom amt = (n:Nat ** (LT 0 n, LT n amt)) 
@@ -111,7 +112,7 @@ GiveChange cur (S k) (S welf) {q = LTESucc q'} with (isElem (S k) (getDenoms cur
   | No contr = 
     let (l ** cands) = filterCandidates {q2= contr} cur (S k) in
     let changeChoices = map handleDenom cands in 
-        minElem fewestCoins changeChoices where 
+        minElemBy {po = LTE} getCoins changeChoices where 
           handleDenom : candDenom (S k) -> Change cur (S k)
           handleDenom (n ** (zLtn, LTESucc nLtek)) =
             let q1 : (n `LTE` S k) = lteSuccRight nLtek in
