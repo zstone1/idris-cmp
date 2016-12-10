@@ -190,25 +190,15 @@ filterHead {x} {f} {xs} o with (filter f (xs))
   filterHead {x} {f} {xs} o | (_ ** rest) with (f x) 
     filterHead {x} {f} {xs} Oh | _ | True = Refl
 
-filterHeadNot : So (not (f x)) -> (snd $ filter f (x :: xs)) = (snd $ filter f xs)
-filterHeadNot {x} {f} {xs} o with (filter f xs) 
-   filterHeadNot {x} {f} {xs} o | (_ ** rest) with (f x)
-     filterHeadNot {x} {f} {xs} Oh | _ | False = Refl
-
 filterBackwards : Elem x (snd $ filter f l) -> (So (f x), Elem x l)
 filterBackwards {l = []} elem = absurd elem 
-filterBackwards {f} {l = (w :: ws)} elem with (filter f (w :: ws))
-    filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys ) with (choose (f w))
-      filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys) | Right no with (filterHeadNot{x=w} {f} {xs=ws} no) 
-        filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys) | Right no | noDiff with (filter f ws)
-      filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys) | Left yes= ?l2
-          filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys) | Right no | noDiff | (_ ** ys') with (_)
-            filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys) | Right no | noDiff | (_ ** ys') | with_pat = ?filterBackwards_rhs
-
-
-
-
---
+filterBackwards {x} {f} {l = (w :: ws)} elem with (filter f ws) proof p1
+  |( _ ** rest) with (f w) proof p2
+    filterBackwards {x}{f}{l=(w::ws)} elem | (_ ** rest) | False = 
+      let (o, elemRec) = filterBackwards {x}{f}{l=ws} (rewrite sym p1 in elem) in
+          (o, There elemRec)
+    filterBackwards {x = x} {f = f} {l = (x :: ws)} Here | (_ ** rest) | True =?l1_1
+    filterBackwards {x = x} {f = f} {l = (w :: ws)} (There later) | (_ ** rest) | True =?l1_2
 
 
       

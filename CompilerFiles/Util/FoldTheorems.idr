@@ -184,25 +184,18 @@ filterForward {x} {l=w :: ws} {f} (There later) success with (filterForward {x} 
        | False = rec
        | True = There rec
 
-
-filterHead : (So (f x)) -> (snd $ filter f (x :: xs)) = (x :: (snd $ filter f xs))
-filterHead {x} {f} {xs} o with (filter f (xs))
-  filterHead {x} {f} {xs} o | (_ ** rest) with (f x) 
-    filterHead {x} {f} {xs} Oh | _ | True = Refl
-
-filterHeadNot : So (not (f x)) -> (snd $ filter f (x :: xs)) = (snd $ filter f xs)
-filterHeadNot {x} {f} {xs} o with (filter f xs) 
-   filterHeadNot {x} {f} {xs} o | (_ ** rest) with (f x)
-     filterHeadNot {x} {f} {xs} Oh | _ | False = Refl
-
 filterBackwards : Elem x (snd $ filter f l) -> (So (f x), Elem x l)
 filterBackwards {l = []} elem = absurd elem 
 filterBackwards {x} {f} {l = (w :: ws)} elem with (filter f ws) proof p1
-  |( _ ** rest) with (f w)
+  |( _ ** rest) with (f w) proof p2
     filterBackwards {x}{f}{l=(w::ws)} elem | (_ ** rest) | False = 
       let (o, elemRec) = filterBackwards {x}{f}{l=ws} (rewrite sym p1 in elem) in
           (o, There elemRec)
-    filterBackwards {x} {f} {l = (w :: ws)} elem | (_ ** rest) | True = ?l1
+    filterBackwards {x = x} {f = f} {l = (x :: ws)} Here | (_ ** rest) | True = 
+      (rewrite sym p2 in Oh, Here)
+    filterBackwards {x = x} {f = f} {l = (w :: ws)} (There later) | (_ ** rest) | True =
+      let (o, elemRec) = filterBackwards {x} {f} {l=ws} (rewrite sym p1 in later) in 
+          (o, There elemRec)
 
 
       
