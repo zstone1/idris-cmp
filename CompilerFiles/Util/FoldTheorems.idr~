@@ -129,15 +129,7 @@ minElemBy {u} {t} {po} f xs = let pairs = map (\e => (e, f e)) xs in
                                  fst $ minElem {po=ProjLifted (Pair u) po} pairs
 
 minElemByLemma1 : TotalPreorder t po => (f: u -> t) -> (l:Vect (S k) u) -> (Elem x l) -> po ( minElem {po} (map f l)) (f x) 
-minElemByLemma1 f (y :: []) Here = reflexive (f y)
-minElemByLemma1 f (y :: []) (There later) = absurd later
-minElemByLemma1 {u} {t} {po} f (y :: y':: ys) Here with ( porder {po} (f y) (minElem {po} (map f (y'::ys))))
-  |(Left l) = ?foo_1
-  |(Right r) = ?foo_2 
-minElemByLemma1 f (y :: y':: xs) (There later) = ?minElemByLemma1_rhs_3
-
-
-
+minElemByLemma1 {po} f xs elem = minElemPrf {po} (map f xs) (mapElem elem)
 
 
 minusPlusCancel : (k : Nat) -> (n : Nat) -> {auto q: LTE n k} ->(k = (n +(k - n)))
@@ -151,6 +143,42 @@ lteMinus Z (S k) {q2} = absurd q2
 lteMinus (S j) (S Z) = rewrite minusZeroRight j in (LTESucc lteRefl )
 lteMinus (S k) (S(S j)) {q2} = let LTESucc f = q2 in
                                    LTESucc $ lteSuccLeft $ (lteMinus k (S j))
+
+getVal : (x : Maybe t) -> {auto prf : IsJust x} -> t
+getVal {prf = prf} Nothing = ?getVal_rhs_1
+getVal {prf = prf} (Just x) = ?getVal_rhs_2
+
+justMapMaybe : (f :t -> Maybe u) -> 
+               (l : Vect k t) ->
+               Elem a l ->
+               IsJust (f a) -> 
+               Elem (getVal $ f a) (snd $ mapMaybe f l)
+justMapMaybe f [] elem p = absurd elem
+justMapMaybe f (a :: as) Here isJust with (mapMaybe f as)
+  | (len ** list) with (f a) 
+    | Nothing = ?l1
+    | Just y = ?l2
+justMapMaybe f (a :: as) (There later) isJust = ?justMapMaybe_rhs_3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

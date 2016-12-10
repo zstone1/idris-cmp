@@ -1,4 +1,5 @@
 module FoldTheorems
+import Prelude.Maybe
 import Projective
 import Data.Vect
 import Decidable.Order  
@@ -143,6 +144,49 @@ lteMinus Z (S k) {q2} = absurd q2
 lteMinus (S j) (S Z) = rewrite minusZeroRight j in (LTESucc lteRefl )
 lteMinus (S k) (S(S j)) {q2} = let LTESucc f = q2 in
                                    LTESucc $ lteSuccLeft $ (lteMinus k (S j))
+
+Uninhabited (IsJust Nothing) where
+  uninhabited ItIsJust impossible
+
+getVal : (x : Maybe t) -> {auto prf : IsJust x} -> t
+getVal {prf} Nothing = absurd prf
+getVal {prf} (Just x) = x
+
+justMapMaybe : (f :t -> Maybe u) -> 
+               (l : Vect k t) ->
+               Elem x l ->
+               IsJust (f x) -> 
+               Elem (getVal $ f x) (snd $ mapMaybe f l)
+justMapMaybe f [] elem p = absurd elem
+justMapMaybe f (a :: as) Here isJust with (mapMaybe f as)
+  | (len ** list) with (f a) 
+    | Nothing = absurd isJust
+    | Just y = Here
+justMapMaybe {x} f (a :: as) (There later) isJust with ( justMapMaybe f as later isJust)
+ | rec with (mapMaybe f as) proof p1
+   | (len ** list) with ( f a )
+      | Nothing = rec
+      | Just y = There rec
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

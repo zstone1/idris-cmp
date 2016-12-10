@@ -84,6 +84,7 @@ filterCand amt cand with ((isLTE 1 cand, isLTE (S cand) amt))
   |( _, No _ )= Nothing
   |( Yes prf1, Yes prf2 ) =  Just (cand ** (prf1, prf2))
 
+
                                  
 filterCandidates : {j:Nat} -> (cur : Currency {k=j}) -> 
                    (amt : Nat) -> 
@@ -103,6 +104,29 @@ filterCandidates {q2} (xss ** constr) (S(S k)) {j} with (hasOne constr)
       case filterCand (S(S k)) x of
            Nothing => (_ ** next)
            Just x => (_ ** x :: next)
+
+
+
+filterCand2 : (amt: Nat) -> (cand :Nat) -> Maybe Nat
+filterCand2 amt cand with ((isLTE 1 cand, isLTE (S cand) amt))
+  |( No _, _ )= Nothing
+  |( _, No _ )= Nothing
+  |( Yes prf1, Yes prf2 ) =  Just (cand)
+
+filterCandidates2 : (cur : Currency) -> (amt :Nat) -> (j**Vect j Nat)
+filterCandidates2 cur amt = mapMaybe (filterCand2 amt) (getDenoms cur)
+
+filterCandidates2NonEmpty : LTE 2 amt -> (Elem (S Z) (snd $ filterCandidates2 cur amt))
+filterCandidates2NonEmpty {cur = ([] ** constr)} _ = absurd (hasOne constr)
+filterCandidates2NonEmpty {cur = (x::xs ** constr)} {amt} prf with (hasOne constr)
+  filterCandidates2NonEmpty {cur = ((S Z)::[] ** constr)} {amt = amt} prf | Here with ((isLTE (S Z)(S Z), isLTE (S (S Z)) amt))
+    filterCandidates2NonEmpty {cur = _} {amt} prf | Here | (No bad, _) = void $ bad (lteRefl)
+    filterCandidates2NonEmpty {cur = _} {amt} prf | Here | (_, No bad) = void $ bad prf 
+    filterCandidates2NonEmpty {cur = _} {amt} prf | Here | (Yes a, Yes b) =  Here 
+  filterCandidates2NonEmpty {cur = ((S Z)::(x':: xs) ** constr)} {amt = amt} prf | Here with (mapMaybe (filterCand2 amt) xs)
+  filterCandidates2NonEmpty {cur = (x::xs ** constr)} {amt} prf | (There later) = ?filterCandidates2NonEmpty_rhs_2
+
+
 
 GiveChange : (cur : Currency) -> (amt: Nat) -> (welf : Nat) ->{auto q : LTE amt welf} -> Change cur amt
 GiveChange cur Z _ = MkChange Z [] (ValidateChange Refl) 
