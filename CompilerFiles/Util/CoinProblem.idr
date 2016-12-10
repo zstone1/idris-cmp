@@ -1,4 +1,5 @@
 module CoinProblem
+import Data.So
 import Projective
 import Data.Vect
 import FoldTheorems
@@ -29,21 +30,21 @@ record CoinConstraints (n:Nat) (cur:Currency {k=k}) where
 Coin : Currency -> Type
 Coin cur = (n : Nat ** CoinConstraints n cur)
 
-getVal : Coin d -> Nat
-getVal = fst
+getValue : Coin d -> Nat
+getValue = fst
 
 MkCoin : (n:Nat) -> (cur : Currency) -> {auto q : Elem n (getDenoms cur)} -> Coin cur
 MkCoin {q} n cur = (n ** ValidateCoin q)
 
 cSum : Vect n (Coin d) -> Nat
-cSum coins = sum (map getVal coins) 
+cSum coins = sum (map getValue coins) 
 
 |||Proof that cSum distributes like sum.
 CSumDistr : (as : Vect n (Coin d)) -> (bs : Vect m (Coin d)) -> cSum as + cSum bs = cSum (as ++ bs)
 CSumDistr as bs = 
-    let l1 = SumAssociates (map getVal as) (map getVal bs) in
-    let p2 = sym $ MapAppendDistributes getVal as bs in
-    let l4 : ( _ = sum (map getVal (as ++ bs))) = rewrite p2 in l1 in l4
+    let l1 = SumAssociates (map getValue as) (map getValue bs) in
+    let p2 = sym $ MapAppendDistributes getValue as bs in
+    let l4 : ( _ = sum (map getValue (as ++ bs))) = rewrite p2 in l1 in l4
 
 record ChangeConstraints (cur : Currency{k=k}) (amt :Nat) (a: Vect n (Coin cur)) where
   constructor ValidateChange
@@ -54,7 +55,7 @@ data Change : (cur : Currency) -> (amt: Nat) -> Type where
 
 implementation Show (Change cur amt) where
   show (MkChange n a _) = (show n) ++ " coins totaling " ++(show (cSum a)) ++". " 
-      ++ (show (map getVal a))
+      ++ (show (map getValue a))
 
 |||Given change for n and change for m, I can combine and make change for n+m
 MergeChange : (c1 : Change cur n) -> (c2 : Change cur m) -> Change cur (n + m)
@@ -84,7 +85,6 @@ filterCand amt cand with ((isLTE 1 cand, isLTE (S cand) amt))
   |( _, No _ )= Nothing
   |( Yes prf1, Yes prf2 ) =  Just (cand ** (prf1, prf2))
 
-
                                  
 filterCandidates : {j:Nat} -> (cur : Currency {k=j}) -> 
                    (amt : Nat) -> 
@@ -105,27 +105,26 @@ filterCandidates {q2} (xss ** constr) (S(S k)) {j} with (hasOne constr)
            Nothing => (_ ** next)
            Just x => (_ ** x :: next)
 
+isCand : (amt: Nat) -> (cand: Nat) -> Bool
+isCand amt cand with ((isLTE 1 cand, isLTE (S cand) amt))
+  |( No _, _ )= False
+  |( _, No _ )= False
+  |( Yes prf1, Yes prf2 ) = True
 
+oneIsCand : LTE 2 amt -> (So (isCand amt 1))
+oneIsCand {amt} x with (( isLTE 1 1, isLTE 2 amt))
+  | (_, No bad) = void $ bad x
+  | (No bad ,_) = void $ bad (lteRefl)
+  | (Yes prf1, Yes prf2) = Oh
 
-filterCand2 : (amt: Nat) -> (cand :Nat) -> Maybe Nat
-filterCand2 amt cand with ((isLTE 1 cand, isLTE (S cand) amt))
-  |( No _, _ )= Nothing
-  |( _, No _ )= Nothing
-  |( Yes prf1, Yes prf2 ) =  Just (cand)
+filterCands : (cur : Currency) -> (amt : Nat) -> (j : Nat ** Vect j Nat)
+filterCands cur amt = filter (isCand amt) (getDenoms cur)
 
-filterCandidates2 : (cur : Currency) -> (amt :Nat) -> (j**Vect j Nat)
-filterCandidates2 cur amt = mapMaybe (filterCand2 amt) (getDenoms cur)
+filterCandsHasOne : (cur :Currency) -> (amt :Nat) -> LTE 2 amt -> Elem 1 (snd $ filterCands cur amt)
+filterCandsHasOne (denoms ** constr) amt prf = filterPass (S Z) (denoms) (isCand amt) (hasOne constr) (oneIsCand {amt} prf)
 
-filterCandidates2NonEmpty : LTE 2 amt -> (Elem (S Z) (snd $ filterCandidates2 cur amt))
-filterCandidates2NonEmpty {cur = ([] ** constr)} _ = absurd (hasOne constr)
-filterCandidates2NonEmpty {cur = (x::xs ** constr)} {amt} prf with (hasOne constr)
-  filterCandidates2NonEmpty {cur = ((S Z)::[] ** constr)} {amt = amt} prf | Here with ((isLTE (S Z)(S Z), isLTE (S (S Z)) amt))
-    filterCandidates2NonEmpty {cur = _} {amt} prf | Here | (No bad, _) = void $ bad (lteRefl)
-    filterCandidates2NonEmpty {cur = _} {amt} prf | Here | (_, No bad) = void $ bad prf 
-    filterCandidates2NonEmpty {cur = _} {amt} prf | Here | (Yes a, Yes b) =  Here 
-  filterCandidates2NonEmpty {cur = ((S Z)::(x':: xs) ** constr)} {amt = amt} prf | Here with (mapMaybe (filterCand2 amt) xs)
-  filterCandidates2NonEmpty {cur = (x::xs ** constr)} {amt} prf | (There later) = ?filterCandidates2NonEmpty_rhs_2
-
+candsAreValid : Elem x (snd $ filterCands cur amt) -> ((LTE 1 amt, LTE (S x) amt))
+candsAreValid {cur} {amt} elem = ?candsAreValid_rhs
 
 
 GiveChange : (cur : Currency) -> (amt: Nat) -> (welf : Nat) ->{auto q : LTE amt welf} -> Change cur amt

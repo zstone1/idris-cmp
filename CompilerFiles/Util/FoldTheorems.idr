@@ -1,4 +1,5 @@
 module FoldTheorems
+import Data.So
 import Prelude.Maybe
 import Projective
 import Data.Vect
@@ -79,6 +80,9 @@ MapAppendDistributes f (x :: xs) bs =
 MergeEqualities : {x,y,a,b:t} -> {f: t->t->u} -> (x = y) -> (a = b) -> (f x a) = (f y b)
 MergeEqualities xy ab = rewrite xy in rewrite ab in Refl
 
+elemSingleton : Elem x [y] ->x=y
+elemSingleton Here = Refl
+elemSingleton (There later) = absurd later
 
 NotElemLemma1 : Elem inList as -> Not $ Elem outList as -> (inList = outList) -> Void
 NotElemLemma1 isIn isOut contra = isOut $ rewrite sym contra in isIn 
@@ -168,15 +172,40 @@ justMapMaybe {x} f (a :: as) (There later) isJust with ( justMapMaybe f as later
       | Nothing = rec
       | Just y = There rec
   
+filterForward : (Elem x l) -> (So (f x)) -> Elem x (snd $ filter f l)
+filterForward {l=[]} elem _ = absurd elem 
+filterForward {x=w} {l= w :: ws} {f} Here success with (filter f ws)
+  | (l ** rest) with (f w)
+    | False = absurd success 
+    | True = Here
+filterForward {x} {l=w :: ws} {f} (There later) success with (filterForward {x} {l=ws} {f} later success)
+  | rec with (filter f ws)
+    | (l ** rest) with (f w)
+       | False = rec
+       | True = There rec
 
 
+filterHead : (So (f x)) -> (snd $ filter f (x :: xs)) = (x :: (snd $ filter f xs))
+filterHead {x} {f} {xs} o with (filter f (xs))
+  filterHead {x} {f} {xs} o | (_ ** rest) with (f x) 
+    filterHead {x} {f} {xs} Oh | _ | True = Refl
+
+filterHeadNot : So (not (f x)) -> (snd $ filter f (x :: xs)) = (snd $ filter f xs)
+filterHeadNot {x} {f} {xs} o with (filter f xs) 
+   filterHeadNot {x} {f} {xs} o | (_ ** rest) with (f x)
+     filterHeadNot {x} {f} {xs} Oh | _ | False = Refl
+
+filterBackwards : Elem x (snd $ filter f l) -> (So (f x), Elem x l)
+filterBackwards {l = []} elem = absurd elem 
+filterBackwards {x} {f} {l = (w :: ws)} elem with (filter f ws) proof p1
+  |( _ ** rest) with (f w)
+    filterBackwards {x}{f}{l=(w::ws)} elem | (_ ** rest) | False = 
+      let (o, elemRec) = filterBackwards {x}{f}{l=ws} (rewrite sym p1 in elem) in
+          (o, There elemRec)
+    filterBackwards {x} {f} {l = (w :: ws)} elem | (_ ** rest) | True = ?l1
 
 
-
-
-
-
-
+      
 
 
 

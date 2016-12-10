@@ -1,4 +1,6 @@
 module FoldTheorems
+import Data.So
+import Prelude.Maybe
 import Projective
 import Data.Vect
 import Decidable.Order  
@@ -78,6 +80,9 @@ MapAppendDistributes f (x :: xs) bs =
 MergeEqualities : {x,y,a,b:t} -> {f: t->t->u} -> (x = y) -> (a = b) -> (f x a) = (f y b)
 MergeEqualities xy ab = rewrite xy in rewrite ab in Refl
 
+elemSingleton : Elem x [y] ->x=y
+elemSingleton Here = Refl
+elemSingleton (There later) = absurd later
 
 NotElemLemma1 : Elem inList as -> Not $ Elem outList as -> (inList = outList) -> Void
 NotElemLemma1 isIn isOut contra = isOut $ rewrite sym contra in isIn 
@@ -144,31 +149,69 @@ lteMinus (S j) (S Z) = rewrite minusZeroRight j in (LTESucc lteRefl )
 lteMinus (S k) (S(S j)) {q2} = let LTESucc f = q2 in
                                    LTESucc $ lteSuccLeft $ (lteMinus k (S j))
 
+Uninhabited (IsJust Nothing) where
+  uninhabited ItIsJust impossible
+
 getVal : (x : Maybe t) -> {auto prf : IsJust x} -> t
-getVal {prf = prf} Nothing = ?getVal_rhs_1
-getVal {prf = prf} (Just x) = ?getVal_rhs_2
+getVal {prf} Nothing = absurd prf
+getVal {prf} (Just x) = x
 
 justMapMaybe : (f :t -> Maybe u) -> 
                (l : Vect k t) ->
-               Elem a l ->
-               IsJust (f a) -> 
-               Elem (getVal $ f a) (snd $ mapMaybe f l)
+               Elem x l ->
+               IsJust (f x) -> 
+               Elem (getVal $ f x) (snd $ mapMaybe f l)
 justMapMaybe f [] elem p = absurd elem
 justMapMaybe f (a :: as) Here isJust with (mapMaybe f as)
   | (len ** list) with (f a) 
-    | Nothing = ?l1
-    | Just y = ?l2
-justMapMaybe f (a :: as) (There later) isJust = ?justMapMaybe_rhs_3
+    | Nothing = absurd isJust
+    | Just y = Here
+justMapMaybe {x} f (a :: as) (There later) isJust with ( justMapMaybe f as later isJust)
+ | rec with (mapMaybe f as) proof p1
+   | (len ** list) with ( f a )
+      | Nothing = rec
+      | Just y = There rec
+  
+filterForward : (Elem x l) -> (So (f x)) -> Elem x (snd $ filter f l)
+filterForward {l=[]} elem _ = absurd elem 
+filterForward {x=w} {l= w :: ws} {f} Here success with (filter f ws)
+  | (l ** rest) with (f w)
+    | False = absurd success 
+    | True = Here
+filterForward {x} {l=w :: ws} {f} (There later) success with (filterForward {x} {l=ws} {f} later success)
+  | rec with (filter f ws)
+    | (l ** rest) with (f w)
+       | False = rec
+       | True = There rec
+
+
+filterHead : (So (f x)) -> (snd $ filter f (x :: xs)) = (x :: (snd $ filter f xs))
+filterHead {x} {f} {xs} o with (filter f (xs))
+  filterHead {x} {f} {xs} o | (_ ** rest) with (f x) 
+    filterHead {x} {f} {xs} Oh | _ | True = Refl
+
+filterHeadNot : So (not (f x)) -> (snd $ filter f (x :: xs)) = (snd $ filter f xs)
+filterHeadNot {x} {f} {xs} o with (filter f xs) 
+   filterHeadNot {x} {f} {xs} o | (_ ** rest) with (f x)
+     filterHeadNot {x} {f} {xs} Oh | _ | False = Refl
+
+filterBackwards : Elem x (snd $ filter f l) -> (So (f x), Elem x l)
+filterBackwards {l = []} elem = absurd elem 
+filterBackwards {f} {l = (w :: ws)} elem with (filter f (w :: ws))
+    filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys ) with (choose (f w))
+      filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys) | Right no with (filterHeadNot{x=w} {f} {xs=ws} no) 
+        filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys) | Right no | noDiff with (filter f ws)
+      filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys) | Left yes= ?l2
+          filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys) | Right no | noDiff | (_ ** ys') with (_)
+            filterBackwards {f} {l = (w :: ws)} elem | (_ ** ys) | Right no | noDiff | (_ ** ys') | with_pat = ?filterBackwards_rhs
 
 
 
 
+--
 
 
-
-
-
-
+      
 
 
 
