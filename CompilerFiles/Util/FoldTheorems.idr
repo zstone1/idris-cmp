@@ -184,22 +184,26 @@ filterForward {x} {l=w :: ws} {f} (There later) success with (filterForward {x} 
        | False = rec
        | True = There rec
 
-filterBackwards : Elem x (snd $ filter f l) -> (So (f x), Elem x l)
-filterBackwards {l = []} elem = absurd elem 
-filterBackwards {x} {f} {l = (w :: ws)} elem with (filter f ws) proof p1
+filterBackwards : (l: Vect k t) -> Elem x (snd $ filter f l) -> (So (f x), Elem x l)
+filterBackwards [] elem = absurd elem 
+filterBackwards {x} {f} (w :: ws) elem with (filter f ws) proof p1
   |( _ ** rest) with (f w) proof p2
-    filterBackwards {x}{f}{l=(w::ws)} elem | (_ ** rest) | False = 
-      let (o, elemRec) = filterBackwards {x}{f}{l=ws} (rewrite sym p1 in elem) in
+    filterBackwards {x}{f} (w::ws) elem | (_ ** rest) | False = 
+      let (o, elemRec) = filterBackwards {x}{f} ws (rewrite sym p1 in elem) in
           (o, There elemRec)
-    filterBackwards {x = x} {f = f} {l = (x :: ws)} Here | (_ ** rest) | True = 
+ -- This line is the magic where idris has deduced out that the heads of both lists agree 
+    filterBackwards {x} {f} (x :: ws) Here | (_ ** rest) | True = 
       (rewrite sym p2 in Oh, Here)
-    filterBackwards {x = x} {f = f} {l = (w :: ws)} (There later) | (_ ** rest) | True =
-      let (o, elemRec) = filterBackwards {x} {f} {l=ws} (rewrite sym p1 in later) in 
+    filterBackwards {x} {f} (w :: ws) (There later) | (_ ** rest) | True =
+      let (o, elemRec) = filterBackwards {x} {f} ws (rewrite sym p1 in later) in 
           (o, There elemRec)
 
 
-      
+implementation Uninhabited (True = False) where
+  uninhabited Refl impossible
 
+implementation Uninhabited (False = True) where
+  uninhabited Refl impossible
 
 
 

@@ -75,41 +75,11 @@ GiveChangeElem cur amt prf =
 getCoins: Change cur amt -> Nat
 getCoins (MkChange n1 _ _) = n1 
 
-candDenom : Nat -> Type
-candDenom amt = (n:Nat ** (LT 0 n, LT n amt)) 
-
-
-filterCand : (amt: Nat) -> (cand: Nat) -> Maybe $ candDenom amt
-filterCand amt cand with ((isLTE 1 cand, isLTE (S cand) amt))
-  |( No _, _ )= Nothing
-  |( _, No _ )= Nothing
-  |( Yes prf1, Yes prf2 ) =  Just (cand ** (prf1, prf2))
-
-                                 
-filterCandidates : {j:Nat} -> (cur : Currency {k=j}) -> 
-                   (amt : Nat) -> 
-                   {auto q1 : (LTE 1 amt)} ->
-                   {auto q2 : (Not$ Elem amt (getDenoms cur))} ->
-                   (p:Nat ** Vect (S p) (candDenom amt))
-filterCandidates cur Z {q1} = absurd q1
-filterCandidates (_**constr) (S Z) {q2} = void $ NotElemLemma1 (hasOne constr) q2 Refl
-filterCandidates {q2} (xss ** constr) (S(S k)) {j} with (hasOne constr) 
-  filterCandidates {q2} (((S Z)::xs) ** _) (S(S k)) | Here = 
-    let c : (candDenom (S(S k))) = (S Z ** (LTESucc LTEZero, LTESucc $ LTESucc $ LTEZero)) in
-    let (l ** rest) = mapMaybe (filterCand (S(S k))) xs in
-      ( _ ** c::rest) 
-  filterCandidates {q2} (x::xs ** _ ) (S(S k)) | There next = 
-    let prf1 = NotElemLemma2 q2 in
-    let (l ** next) = filterCandidates (xs ** ValidateCurrency next) (S(S k)) {q2 = prf1} in
-      case filterCand (S(S k)) x of
-           Nothing => (_ ** next)
-           Just x => (_ ** x :: next)
-
 isCand : (amt: Nat) -> (cand: Nat) -> Bool
 isCand amt cand with ((isLTE 1 cand, isLTE (S cand) amt))
   |( No _, _ )= False
   |( _, No _ )= False
-  |( Yes prf1, Yes prf2 ) = True
+  |( Yes _, Yes _ ) = True
 
 oneIsCand : LTE 2 amt -> (So (isCand amt 1))
 oneIsCand {amt} x with (( isLTE 1 1, isLTE 2 amt))
@@ -117,35 +87,73 @@ oneIsCand {amt} x with (( isLTE 1 1, isLTE 2 amt))
   | (No bad ,_) = void $ bad (lteRefl)
   | (Yes prf1, Yes prf2) = Oh
 
-filterCands : (cur : Currency) -> (amt : Nat) -> (j : Nat ** Vect j Nat)
+filterCands : (cur : Currency) -> (amt : Nat) -> (j : Nat ** (Vect j Nat))
 filterCands cur amt = filter (isCand amt) (getDenoms cur)
 
 filterCandsHasOne : (cur :Currency) -> (amt :Nat) -> LTE 2 amt -> Elem 1 (snd $ filterCands cur amt)
-filterCandsHasOne (denoms ** constr) amt prf = filterPass (S Z) (denoms) (isCand amt) (hasOne constr) (oneIsCand {amt} prf)
+filterCandsHasOne (denoms ** constr) amt prf = filterForward (hasOne constr) (oneIsCand {amt} prf)
 
-candsAreValid : Elem x (snd $ filterCands cur amt) -> ((LTE 1 amt, LTE (S x) amt))
-candsAreValid x = ?candsAreValid_rhs
+candsAreValid : So (isCand amt x) -> ((LTE 1 x, LTE (S x) amt))
+candsAreValid {x} {amt} o with (isCand amt x) proof oPrf
+  candsAreValid {x} {amt} Oh | True with (isLTE 1 x, isLTE (S x) amt) proof prf2
+    | (No _, _ ) = absurd oPrf
+    | (Yes a, No b) = absurd oPrf
+    | (Yes a, Yes b) = (a, b)
 
+candsLemma1 : Elem x (snd $ filterCands cur amt) -> (Elem x (getDenoms cur), LTE 1 x, LTE (S x) amt)
+candsLemma1 {cur} elem = let (o, e) = filterBackwards (getDenoms cur) elem  in 
+                        let (p1,p2) = candsAreValid o in
+                            (e, p1,p2) 
+
+filterCandsWithPrf : (cur : Currency) -> (amt: Nat) -> {auto p:LTE 2 amt} -> (j: Nat ** (Vect (S j) Nat))
+filterCandsWithPrf cur amt {p} with (filterCandsHasOne cur amt p)
+  | hasOne with (filterCands cur amt)
+    | (_**[]) = absurd hasOne
+    | (S j ** (c::cs)) = (j ** (c::cs))
+
+
+candsLemma2 : Elem x (snd $ filterCandsWithPrf cur amt {p=p}) -> (Elem x (snd $ filterCands cur amt))
+candsLemma2 {cur}{amt}{p} elem with (filterCandsHasOne cur amt p)
+  | foo with (filterCands cur amt)
+    | (_** []) = absurd foo 
+    | (_ ** (c::cs)) = elem
+
+restrictFunc : (f: (x:u) -> Elem x (a::as) -> t) -> (y:u) -> Elem y as -> t
+restrictFunc f y elem = f y (There elem) 
+
+mapElemPrf : {l: Vect k u} -> (f: (x:u) -> Elem x l -> t) -> Vect k t
+mapElemPrf {l = []} _ = []
+mapElemPrf {l = (x :: xs)} f =  (f x Here) :: (mapElemPrf {l=xs} (restrictFunc f))
 
 GiveChange : (cur : Currency) -> (amt: Nat) -> (welf : Nat) ->{auto q : LTE amt welf} -> Change cur amt
 GiveChange cur Z _ = MkChange Z [] (ValidateChange Refl) 
 GiveChange cur (S k) Z {q} = absurd q
-GiveChange cur (S k) (S welf) {q = LTESucc q'} with (isElem (S k) (getDenoms cur))
-  | Yes prf = GiveChangeElem cur (S k) prf 
-  | No contr = 
-    let (l ** cands) = filterCandidates {q2= contr} cur (S k) in
-    let changeChoices = map handleDenom cands in 
-        minElemBy {po = LTE} getCoins changeChoices where 
-          handleDenom : candDenom (S k) -> Change cur (S k)
-          handleDenom (n ** (zLtn, LTESucc nLtek)) =
-            let q1 : (n `LTE` S k) = lteSuccRight nLtek in
-            let q2 : (n `LTE` welf) = lteTransitive nLtek q' in
-            let q3 : ((S k)-n `LTE` welf) = let LTESucc f = lteMinus (S k) n in lteTransitive f q' in
-            let c1 = GiveChange cur n welf in
-            let c2 = GiveChange cur ((S k) -n) welf in
-                rewrite minusPlusCancel (S k) n in MergeChange c1 c2 
-                        
-  
+GiveChange cur (S Z) _ = GiveChangeElem cur (S Z) (hasOne $ getConstraints cur)
+GiveChange cur (S(S k)) (S welf) {q = LTESucc q'} with (isElem (S(S k)) (getDenoms cur))
+  | (Yes prf) = GiveChangeElem cur (S(S k)) prf
+  | (No contr) = minElemBy {po=LTE} getCoins (mapElemPrf mapThrough) where
+                   handleCand :  (Elem c (getDenoms cur), LTE 1 c, LTE (S c) (S(S k))) -> Change cur (S(S k))
+                   handleCand {c} (p1, p2, LTESucc p3) = 
+                     let q1 : (c `LTE` S(S k)) = lteSuccRight p3 in
+                     let q2 : (c `LTE` welf) = lteTransitive p3 q' in
+                     let q3 : ((S(S k))-c `LTE` welf) = let LTESucc f = lteMinus (S(S k)) c in lteTransitive f q' in
+                     let c1 = GiveChange cur c welf in
+                     let c2 = GiveChange cur ((S(S k)) - c) welf in
+                         rewrite minusPlusCancel (S(S k)) c in MergeChange c1 c2 
+                   mapThrough : (x:Nat) -> Elem x (snd $ filterCandsWithPrf cur (S(S k))) -> Change cur (S(S k))
+                   mapThrough x = handleCand . candsLemma1 . candsLemma2 
+ 
+
+AtLeastOneCoin : (s: Change cur (S amt)) -> LTE 1 (getCoins s)
+AtLeastOneCoin {amt = amt} (MkChange Z a x) = ?foo_2
+AtLeastOneCoin {amt = amt} (MkChange (S j) a x) = LTESucc LTEZero
+
+
+GiveChangeMinimizes :  (s: Change cur amt) -> LTE (getCoins$ GiveChange cur amt amt {q=lteRefl}) (getCoins s)
+GiveChangeMinimizes {amt = Z} {cur}s = LTEZero
+GiveChangeMinimizes {amt = (S Z)} {cur} s = ?GiveChangeMinimizes_rhs_2
+GiveChangeMinimizes {amt = (S(S j))} {cur} s= ?GiveChangeMinimizes_rhs_2
+
 USCurrency : Currency {k=4}
 USCurrency = MkCurrency [1,5,10,25]
 
