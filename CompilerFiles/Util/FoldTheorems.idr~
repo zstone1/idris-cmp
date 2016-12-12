@@ -97,6 +97,14 @@ minimum {po} x y with (porder {po} x y)
     | Left _ = x
     | Right _ = y
 
+minimumLemma1 : Ordered t po => (f . Prelude.Basics.fst) (minimum @{pj} {po=ProjLifted (Pair u) po} (a, f a) (b, f b)) = minimum @{inht} {po} (f a) (f b)
+minimumLemma1 {u} {f} {a} {b} {po} with (porder {po=ProjLifted (Pair u) po} (a, f a) (b, f b))
+  | (Left (LiftToProj po p1)) with (porder {po} (f a) (f b))
+    |Left p2 = Refl
+    |Right p2= antisymmetric (f a) (f b) p1 p2
+  | (Right (LiftToProj po p1)) with (porder {po} (f a) (f b))
+    |Left p2 = antisymmetric (f b) (f a) p1 p2
+    |Right p2 = Refl
 
 minElem : TotalPreorder t po => Vect (S k) t -> t
 minElem (x :: []) = x
@@ -127,15 +135,30 @@ minElemPrf {x} {po} (y :: y' :: ys) (There later) with (porder {po} y (minElem {
   |Left p = let rec = minElemPrf {x} {po} (y'::ys) later in 
                transitive y (minElem {po} (y'::ys)) x p rec 
   |Right p = minElemPrf {x}{po} (y'::ys) later
---
---
+
+mapPair : (f:u-> t) -> (x:u) -> (u,t)
+mapPair f x = (x,f x)
+
 minElemBy : TotalPreorder t po => (u -> t) -> Vect (S k) u -> u
-minElemBy {u} {t} {po} f xs = let pairs = map (\e => (e, f e)) xs in 
-                                 fst $ minElem {po=ProjLifted (Pair u) po} pairs
+minElemBy {u} {t} {po} f xs = Basics.fst $ minElem @{pj} {po=ProjLifted (Pair u) po} (map (mapPair f) xs)
 
 minElemByLemma1 : TotalPreorder t po => (f: u -> t) -> (l:Vect (S k) u) -> (Elem x l) -> po ( minElem {po} (map f l)) (f x) 
 minElemByLemma1 {po} f xs elem = minElemPrf {po} (map f xs) (mapElem elem)
 
+minElemByLemma2 : Ordered t po => (f:u -> t) -> (l: Vect (S k) u) -> (minElem @{inht} {po} (map f l)) = f (minElemBy {po} f l)
+minElemByLemma2 f (x :: [])= Refl
+minElemByLemma2 {u} {po} {t} f (x :: x' :: xs) with (porder {po} (f x) (minElem {po} (map f (x'::xs))))
+  |Left l1 with (porder @{pj} {po=ProjLifted(Pair u) po} (x, f x) (minElem {po = ProjLifted (Pair u) po}@{pj} ((x', f x') :: (map (mapPair f) xs))))
+    |Left l2 = Refl
+    |Right (LiftToProj po y) = ?l2_1
+  |Right r = ?l3
+--  let rest = minElem @{pj} {po=ProjLifted (Pair u) po} (map (mapPair f) (x'::xs)) in 
+--  let rec : (minElem {po}(map f (x'::xs)) = f $ fst $ rest) = minElemByLemma2 {po} f (x'::xs) in 
+--  let p1 : (minElem {po}(map f (x::x'::xs)) = minimum {po} (f x) (f $ fst $ rest)) = cong {f= minimum {po} (f x)} rec in
+--  let lem2 : ((f . fst) (minimum @{pj} {po=ProjLifted (Pair u) po} (x,f x) (fst rest, f $ fst rest)) = minimum @{inht} {po} (f x) (f $ fst $ rest)) = minimumLemma1{po} {f} {a=x} {b=(fst rest)} in 
+--  let p4 : ( _ = (f . fst) (minimum {po=ProjLifted (Pair u) po} (x,f x) (rest))) trans (
+--  let p2 : ( _ = f $ fst $ minimum @{pj} {po=ProjLifted (Pair u) po} (x, f x) rest ) = ?l1 in
+--        let result : (minElem @{inht} {po}(map f (x::x'::xs)) = f $ fst $ minElem @{pj} {po=ProjLifted (Pair u) po} (map (mapPair f) (x::x'::xs))) = ?l1 in 
 
 minusPlusCancel : (k : Nat) -> (n : Nat) -> {auto q: LTE n k} ->(k = (n +(k - n)))
 minusPlusCancel k Z = rewrite minusZeroRight k in Refl
@@ -184,25 +207,26 @@ filterForward {x} {l=w :: ws} {f} (There later) success with (filterForward {x} 
        | False = rec
        | True = There rec
 
-
-filterHead : (So (f x)) -> (snd $ filter f (x :: xs)) = (x :: (snd $ filter f xs))
-filterHead {x} {f} {xs} o with (filter f (xs))
-  filterHead {x} {f} {xs} o | (_ ** rest) with (f x) 
-    filterHead {x} {f} {xs} Oh | _ | True = Refl
-
-filterBackwards : Elem x (snd $ filter f l) -> (So (f x), Elem x l)
-filterBackwards {l = []} elem = absurd elem 
-filterBackwards {x} {f} {l = (w :: ws)} elem with (filter f ws) proof p1
+filterBackwards : (l: Vect k t) -> Elem x (snd $ filter f l) -> (So (f x), Elem x l)
+filterBackwards [] elem = absurd elem 
+filterBackwards {x} {f} (w :: ws) elem with (filter f ws) proof p1
   |( _ ** rest) with (f w) proof p2
-    filterBackwards {x}{f}{l=(w::ws)} elem | (_ ** rest) | False = 
-      let (o, elemRec) = filterBackwards {x}{f}{l=ws} (rewrite sym p1 in elem) in
+    filterBackwards {x}{f} (w::ws) elem | (_ ** rest) | False = 
+      let (o, elemRec) = filterBackwards {x}{f} ws (rewrite sym p1 in elem) in
           (o, There elemRec)
-    filterBackwards {x = x} {f = f} {l = (x :: ws)} Here | (_ ** rest) | True =?l1_1
-    filterBackwards {x = x} {f = f} {l = (w :: ws)} (There later) | (_ ** rest) | True =?l1_2
+ -- This line is the magic where idris has deduced out that the heads of both lists agree 
+    filterBackwards {x} {f} (x :: ws) Here | (_ ** rest) | True = 
+      (rewrite sym p2 in Oh, Here)
+    filterBackwards {x} {f} (w :: ws) (There later) | (_ ** rest) | True =
+      let (o, elemRec) = filterBackwards {x} {f} ws (rewrite sym p1 in later) in 
+          (o, There elemRec)
 
 
-      
+implementation Uninhabited (True = False) where
+  uninhabited Refl impossible
 
+implementation Uninhabited (False = True) where
+  uninhabited Refl impossible
 
 
 

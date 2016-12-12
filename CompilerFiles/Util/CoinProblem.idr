@@ -3,7 +3,9 @@ import Data.So
 import Projective
 import Data.Vect
 import FoldTheorems
+import Decidable.Order
 %default total
+
 
 
 record CurrencyConstraints (d : Vect k Nat) where
@@ -118,6 +120,8 @@ candsLemma2 {cur}{amt}{p} elem with (filterCandsHasOne cur amt p)
     | (_** []) = absurd foo 
     | (_ ** (c::cs)) = elem
 
+
+
 restrictFunc : (f: (x:u) -> Elem x (a::as) -> t) -> (y:u) -> Elem y as -> t
 restrictFunc f y elem = f y (There elem) 
 
@@ -125,23 +129,29 @@ mapElemPrf : {l: Vect k u} -> (f: (x:u) -> Elem x l -> t) -> Vect k t
 mapElemPrf {l = []} _ = []
 mapElemPrf {l = (x :: xs)} f =  (f x Here) :: (mapElemPrf {l=xs} (restrictFunc f))
 
-GiveChangeI : (cur : Currency) -> (amt: Nat) -> (welf : Nat) ->{auto q : LTE amt welf} -> Change cur amt
-GiveChangeI cur Z _ = MkChange Z [] (ValidateChange Refl) 
-GiveChangeI cur (S k) Z {q} = absurd q
-GiveChangeI cur (S Z) _ = GiveChangeElem cur (S Z) (hasOne $ getConstraints cur)
-GiveChangeI cur (S(S k)) (S welf) {q = LTESucc q'} with (isElem (S(S k)) (getDenoms cur))
-  | (Yes prf) = GiveChangeElem cur (S(S k)) prf
-  | (No contr) = minElemBy {po=LTE} getCoins (mapElemPrf mapThrough) where
-                   handleCand :  (Elem c (getDenoms cur), LTE 1 c, LTE (S c) (S(S k))) -> Change cur (S(S k))
-                   handleCand {c} (p1, p2, LTESucc p3) = 
-                     let q1 : (c `LTE` S(S k)) = lteSuccRight p3 in
-                     let q2 : (c `LTE` welf) = lteTransitive p3 q' in
-                     let q3 : ((S(S k))-c `LTE` welf) = let LTESucc f = lteMinus (S(S k)) c in lteTransitive f q' in
-                     let c1 = GiveChangeI cur c welf in
-                     let c2 = GiveChangeI cur ((S(S k)) - c) welf in
-                         rewrite minusPlusCancel (S(S k)) c in MergeChange c1 c2 
-                   mapThrough : (x:Nat) -> Elem x (snd $ filterCandsWithPrf cur (S(S k))) -> Change cur (S(S k))
-                   mapThrough x = handleCand . candsLemma1 . candsLemma2 
+mutual
+  GiveChangeI : (cur : Currency) -> (amt: Nat) -> (welf : Nat) ->{auto q : LTE amt welf} -> Change cur amt
+  handleCand : {auto q : LTE (S k) welf} -> (Elem c (getDenoms cur), LTE 1 c, LTE (S c) (S(S k))) -> Change cur (S(S k))
+  mapThrough : {auto q : LTE (S k) welf} -> (x:Nat) -> Elem x (snd $ filterCandsWithPrf cur (S(S k))) -> Change cur (S(S k))
+
+  GiveChangeI cur Z _ = MkChange Z [] (ValidateChange Refl) 
+  GiveChangeI cur (S k) Z {q} = absurd q
+  GiveChangeI cur (S Z) _ = GiveChangeElem cur (S Z) (hasOne $ getConstraints cur)
+  GiveChangeI cur (S(S k)) (S welf) {q = LTESucc q'} with (isElem (S(S k)) (getDenoms cur))
+    | (Yes prf) = GiveChangeElem cur (S(S k)) prf
+    | (No contr) = minElemBy @{inht} {po=LTE} getCoins (mapElemPrf mapThrough)
+
+  handleCand {c} {k} {welf} {cur} {q} (p1, p2, LTESucc p3) = 
+    let q1 : (c `LTE` S(S k)) = lteSuccRight p3 in
+    let q2 : (c `LTE` welf) = lteTransitive p3 q in
+    let q3 : ((S(S k))-c `LTE` welf) = let LTESucc f = lteMinus (S(S k)) c in lteTransitive f q in
+    let c1 = GiveChangeI cur c welf in
+    let c2 = GiveChangeI cur ((S(S k)) - c) welf in
+        rewrite minusPlusCancel (S(S k)) c in MergeChange c1 c2 
+
+  mapThrough x = handleCand . candsLemma1 . candsLemma2 
+ 
+
 GiveChange : (cur : Currency) -> (amt: Nat) -> Change cur amt
 GiveChange cur amt = GiveChangeI cur amt amt {q=lteRefl}
 
@@ -149,13 +159,23 @@ AtLeastOneCoin : (s: Change cur (S amt)) -> LTE 1 (getCoins s)
 AtLeastOneCoin {amt = amt} (MkChange _ [] x) = absurd$ sym$ amtCheck x
 AtLeastOneCoin {amt = amt} (MkChange _ (a::as) x) = LTESucc LTEZero
 
+mutual 
+  GiveChangeMinimizes : {auto q: LTE amt welf} -> (s: Change cur amt) -> LTE (getCoins$ GiveChange cur amt) (getCoins s)
+  alwaysElem : (s: Change cur amt) -> Elem s (mapElemPrf mapThrough)
+  mapThroughMinimizes : {auto q: LTE (S k) welf} -> (s: Change cur (S(S k))) -> LTE (getCoins (minElemBy @{inht} {po=LTE} getCoins (mapElemPrf (mapThrough {k}{cur})))) (getCoins s)
 
-GiveChangeMinimizes :  (s: Change cur amt) -> LTE (getCoins$ GiveChange cur amt) (getCoins s)
-GiveChangeMinimizes {amt = Z} {cur}s = LTEZero
-GiveChangeMinimizes {amt = (S Z)} {cur} s = AtLeastOneCoin s
-GiveChangeMinimizes {amt = (S(S j))} {cur} s with(isElem (S(S j)) (getDenoms cur))
-  | (Yes prf) = AtLeastOneCoin s
-  | (No contr) =  ?l2
+  mapThroughMinimizes s {k}{cur} with( mapElemPrf (mapThrough {cur}{k})) proof prf1
+     | list =  let lem2 : ( _ = getCoins (minElemBy {po=LTE} getCoins list)) = minElemByLemma2 getCoins list {po=LTE} in
+               let lem1 = minElemByLemma1 {po=LTE} getCoins list (rewrite prf1 in alwaysElem s) in
+                   replace {P = flip LTE (getCoins s)} lem2 lem1 
+         
+  
+  GiveChangeMinimizes {amt = Z} {cur}s = LTEZero
+  GiveChangeMinimizes {amt = (S Z)} {cur} s = AtLeastOneCoin s
+  GiveChangeMinimizes {amt = (S k)} {welf = Z} {q} s = absurd q
+  GiveChangeMinimizes {amt = (S(S k))} {welf = S j} {cur} {q = LTESucc q'} s with(isElem (S(S k)) (getDenoms cur))
+    | (Yes prf) = AtLeastOneCoin s
+    | (No contr) =  mapThroughMinimizes s
 
 USCurrency : Currency {k=4}
 USCurrency = MkCurrency [1,5,10,25]
