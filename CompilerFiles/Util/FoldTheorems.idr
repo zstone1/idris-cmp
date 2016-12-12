@@ -1,4 +1,5 @@
 module FoldTheorems
+import Syntax.PreorderReasoning
 import Data.So
 import Prelude.Maybe
 import Projective
@@ -32,17 +33,13 @@ FoldAssocCons: Associates f ->
                f a (foldr f s as) = foldr f s (a :: as)  
 FoldAssocCons _ _ [] = Refl
 FoldAssocCons {f} {s} prf a (x :: xs) =
-  let foldxs = foldr f s xs in 
-  let foldxxs = foldr f s (x::xs) in 
-  let l1 = prf a x foldxs in
-  let rec = FoldAssocCons {f=f}{s=s} prf x xs in
-  let l2 : (f a foldxxs = _ ) = rewrite sym rec in sym l1 in
-  let rec2 = FoldAssocCons {f=f} {s=s} prf (f a x) xs in
-  let l3 : ( f a foldxxs = foldr f s ((f a x) :: xs)) = rewrite sym rec2 in l2 in
-  -- I know if is associative
-  let fassoc : ((\x1 => f (f a x) x1) = (\x1 => f a (f x x1))) = AssociatesExtend prf a x in
-  let l4 : ( _ = foldr f s (a :: x :: xs)) = rewrite sym fassoc in Refl in
-    rewrite sym l4 in l3
+    let rec = sym $ FoldAssocCons {f}{s} prf x xs in
+    let axsAssoc = sym$ prf a x (foldr f s xs) in
+  (f a (foldr f s (x::xs)))   ={ rewrite rec in axsAssoc  }=
+  (f (f a x) (foldr f s xs))  ={ FoldAssocCons {f}{s} prf (f a x) xs }=
+    let extends = (AssociatesExtend prf a x) in 
+  (foldr f s ((f a x) :: xs)) ={ cong {f=\e => foldrImpl f s e xs} extends }=
+  (foldr f s (a :: x :: xs)) QED
 
 |||Given an associative function, folding that function
 |||distributes over concatonation.
@@ -54,17 +51,12 @@ FoldAssocConcat : Associates f ->
 FoldAssocConcat {f} {s} prf idprf [] bs = 
   rewrite idprf (foldr f s bs) in Refl
 FoldAssocConcat {f} {s} prf idprf (a :: as) bs = 
-  let foldas = (foldr f s as) in
-  let foldaas = (foldr f s (a::as)) in
-  let foldbs = (foldr f s bs) in
-  let l1 = FoldAssocCons {s=s} {f=f} prf a as in
-  let l2 = prf a foldas foldbs in
-  let t3 : (f foldaas foldbs = f a (f foldas foldbs)) = (rewrite sym l1 in l2) in
-  let rec = FoldAssocConcat {f=f} {s=s} prf idprf as bs in
-  let t4 : (f foldaas foldbs = f a (foldr f s (as ++ bs))) = rewrite sym rec in t3 in
-  let l5 = FoldAssocCons {s=s} {f=f} prf a (as ++ bs) in
-  let t5 : (f foldaas foldbs = foldr f s (a :: (as ++ bs))) = rewrite sym l5 in t4 in
-    t5 
+    let consAAs = sym$ FoldAssocCons{f}{s} prf a as in
+    let assocAAsBs = prf a (foldr f s as) (foldr f s bs) in
+  (f (foldr f s (a::as)) (foldr f s bs))  ={ rewrite consAAs in assocAAsBs }=
+  (f a (f (foldr f s as) (foldr f s bs))) ={ cong {f=f a}$ FoldAssocConcat {f}{s} prf idprf as bs }=
+  (f a (foldr f s (as ++ bs)))            ={ FoldAssocCons {f}{s} prf a (as++bs) }=
+  (foldr f s (a :: (as++bs)))             QED
 
 SumAssociates : (as : Vect n Nat) -> (bs: Vect m Nat) -> (sum as + sum bs = sum (as ++ bs))
 SumAssociates as bs = 

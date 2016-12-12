@@ -1,4 +1,5 @@
 module CoinProblem
+import Syntax.PreorderReasoning
 import Data.So
 import Projective
 import Data.Vect
@@ -43,10 +44,10 @@ cSum coins = sum (map getValue coins)
 
 |||Proof that cSum distributes like sum.
 CSumDistr : (as : Vect n (Coin d)) -> (bs : Vect m (Coin d)) -> cSum as + cSum bs = cSum (as ++ bs)
-CSumDistr as bs = 
-    let l1 = SumAssociates (map getValue as) (map getValue bs) in
-    let p2 = sym $ MapAppendDistributes getValue as bs in
-    let l4 : ( _ = sum (map getValue (as ++ bs))) = rewrite p2 in l1 in l4
+CSumDistr as bs =  
+  (cSum as + cSum bs)                            ={ SumAssociates (map getValue as) (map getValue bs) }= 
+  (sum ((map getValue as) ++ (map getValue bs))) ={ cong $ MapAppendDistributes getValue as bs }=
+  (cSum (as ++ bs))                              QED
 
 record ChangeConstraints (cur : Currency{k=k}) (amt :Nat) (a: Vect n (Coin cur)) where
   constructor ValidateChange
@@ -62,10 +63,11 @@ implementation Show (Change cur amt) where
 |||Given change for n and change for m, I can combine and make change for n+m
 MergeChange : (c1 : Change cur n) -> (c2 : Change cur m) -> Change cur (n + m)
 MergeChange (MkChange {amt = amt1} _ a1 const1) (MkChange {amt = amt2} _ a2 const2) = 
-  let (amt1Check, amt2Check) = (amtCheck const1, amtCheck const2) in
-  let sumCheckA = MergeEqualities amt1Check amt2Check in
-  let sumCheckB : (amt1 + amt2 = cSum (a1 ++ a2)) = rewrite sym $ CSumDistr a1 a2 in sumCheckA in
-    MkChange _ (a1 ++ a2) (ValidateChange sumCheckB) 
+  let amtValid = 
+    (amt1 + amt2)       ={ MergeEqualities (amtCheck const1) (amtCheck const2) }=
+    (cSum a1 + cSum a2) ={ CSumDistr a1 a2 }= 
+    (cSum (a1 ++ a2))   QED in
+  MkChange _ (a1 ++ a2) (ValidateChange amtValid) 
 
 |||Does the obvious then when the amount of change is a value for a coin.
 total
@@ -165,7 +167,7 @@ mutual
   
   smallChangeCands : {c:Coin cur} -> (S (S k) = cSum (c :: c' :: cs)) -> Elem (getValue c) (snd $ filterCandsWithPrf cur (S (S k)))
 
-  mapThroughCoin : (wit : Elem x (snd $ filterCandsWithPrf cur (S(S k)))) -> (mapThrough {k} {cur} wit)
+--  mapThroughCoin : (wit : Elem x (snd $ filterCandsWithPrf cur (S(S k)))) -> (mapThrough {k} {cur} wit)
 
   mapThroughMinimizes {cur} {k} (MkChange _ [] constr) = absurd $ sym $ amtCheck constr
   mapThroughMinimizes {cur} {k} {q'} (MkChange _ (c :: []) constr) = 
@@ -176,8 +178,8 @@ mutual
         void $ q' $ rewrite trans amtprf lem in elemprf
 
   mapThroughMinimizes {cur} {k} {q'} (MkChange _ (c::c'::cs) constr) =
-    let lem1 = smallChangeCands (amtCheck constr) in
-    let mapped = mapThrough lem1 {k} {cur} in 
+--    let lem1 = smallChangeCands (amtCheck constr) in
+--    let mapped = mapThrough lem1 {k} {cur} in 
         ?foo 
 
 
