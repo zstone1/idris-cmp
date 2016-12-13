@@ -25,6 +25,15 @@ IdenExtend : IdenQ f -> (f = Basics.id)
 --Idris does not know about "extentionality" of functions. So we must use believe_me.
 IdenExtend _ = believe_me ()
 
+public export
+qed : (x : Nat) -> LTE x x
+qed x = lteRefl
+
+public export
+step : (x:Nat) -> (LTE x y) -> (LTE y z) -> (LTE x z)
+step x p1 p2 = lteTransitive p1 p2
+
+
 |||Given an associate folding function, this proves that 
 |||we can pull of the first element in the obvious way.
 FoldAssocCons: Associates f ->
@@ -54,23 +63,33 @@ FoldAssocConcat {f} {s} prf idprf (a :: as) bs =
     let consAAs = sym$ FoldAssocCons{f}{s} prf a as in
     let assocAAsBs = prf a (foldr f s as) (foldr f s bs) in
   (f (foldr f s (a::as)) (foldr f s bs))  ={ rewrite consAAs in assocAAsBs }=
-  (f a (f (foldr f s as) (foldr f s bs))) ={ cong {f=f a}$ FoldAssocConcat {f}{s} prf idprf as bs }=
+  (f a (f (foldr f s as) (foldr f s bs))) ={ cong $ FoldAssocConcat {f}{s} prf idprf as bs }=
   (f a (foldr f s (as ++ bs)))            ={ FoldAssocCons {f}{s} prf a (as++bs) }=
   (foldr f s (a :: (as++bs)))             QED
+
 
 SumAssociates : (as : Vect n Nat) -> (bs: Vect m Nat) -> (sum as + sum bs = sum (as ++ bs))
 SumAssociates as bs = 
   let assoc = \a,b,c => sym $ plusAssociative a b c in
-      FoldAssocConcat {f=\a,b => plus a b}{s=Z} assoc plusZeroLeftNeutral as bs
+      FoldAssocConcat {f=\a,b => plus a b} assoc plusZeroLeftNeutral as bs
 
 MapAppendDistributes : (f: t->u) -> (as : Vect n t) -> (bs : Vect m t) -> (map f as) ++ (map f bs) = map f (as ++ bs)
 MapAppendDistributes f [] bs = Refl
-MapAppendDistributes f (x :: xs) bs = 
-  let induct = MapAppendDistributes f xs bs in
-    rewrite induct in Refl 
+MapAppendDistributes f (x :: xs) bs =  rewrite MapAppendDistributes f xs bs in Refl
 
-MergeEqualities : {x,y,a,b:t} -> {f: t->t->u} -> (x = y) -> (a = b) -> (f x a) = (f y b)
-MergeEqualities xy ab = rewrite xy in rewrite ab in Refl
+
+syntax [from] "=[" [prf] "]=" [to] = (from) ={ (|
+                    rewrite prf in  Refl,
+                    rewrite prf in lteRefl,
+                    replace prf from
+                 |) }= (to)
+
+MergeEqualities : {x,y,a,b:t} -> (f: t->t->u) -> (x = y) -> (a = b) -> (f x a) = (f y b)
+MergeEqualities {x}{y}{a}{b} f xy ab =
+  (f x a) =[ ab ]=
+  (f x b) =[ xy ]=
+  (f y b) QED
+
 
 elemSingleton : Elem x [y] ->x=y
 elemSingleton Here = Refl
@@ -225,10 +244,6 @@ filterBackwards {x} {f} (w :: ws) elem with (filter f ws) proof p1
     filterBackwards {x} {f} (w :: ws) (There later) | (_ ** rest) | True =
       let (o, elemRec) = filterBackwards {x} {f} ws (rewrite sym p1 in later) in 
           (o, There elemRec)
-
-
-implementation Uninhabited (True = False) where
-  uninhabited Refl impossible
 
 implementation Uninhabited (False = True) where
   uninhabited Refl impossible
