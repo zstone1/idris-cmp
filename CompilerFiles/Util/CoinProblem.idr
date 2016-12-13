@@ -167,6 +167,9 @@ mutual
   mapThroughMinimizes : {q: LTE (S k) welf} -> {q' : Not $ Elem (S(S k)) (getDenoms cur)} -> (s: Change cur (S(S k))) -> 
                                      LTE (getCoins (minElemBy @{inht} {po=LTE} getCoins (mapElemPrf (mapThrough {k}{cur})))) (getCoins s)
   
+  
+  addCoinToMin : (c:Coin cur) -> LTE (getCoins $ GiveChangeI cur (amt+(getValue c)) welf {q=q1}) (S(getCoins $ GiveChangeI cur amt welf {q=q2}))
+
   smallChangeCands : {c:Coin cur} -> (S (S k) = cSum (c :: c' :: cs)) -> Elem (getValue c) (snd $ filterCandsWithPrf cur (S (S k)))
 
   mapThroughMinimizes {cur} {k} (MkChange _ [] constr) = absurd $ sym $ amtCheck constr
@@ -206,6 +209,8 @@ mutual
     let prev = MkChange _ (c'::cs) (ValidateChange p5) in
     let recMin = GiveChangeMinimizes {amt=(S(S k) - cval)} {q=p6} prev in
      
+    let p7 : (getCoins (MkChange _ (c::c'::cs) constr) = S(getCoins prev)) = ?lemma_3 in
+    let p8 : (getCoins $ GiveChangeI cur (S(S k)) welf {
 --    let lem1 = smallChangeCands (amtCheck constr) in
 --    let mapped = mapThrough lem1 {k} {cur} in 
         ?foo 
