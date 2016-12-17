@@ -7,3 +7,4 @@ import public Util.NatExt
 import public Util.PreorderReasoningExt
 import public Util.Projective
 import public Util.VectExt
+import public Util.BoolExt
