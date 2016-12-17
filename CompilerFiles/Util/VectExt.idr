@@ -1,7 +1,7 @@
 module VectExt
 import public Data.Vect
 import Data.So
-import MaybeExt
+import Util.MaybeExt
 %access export
 
 justMapMaybe : (f :t -> Maybe u) -> 

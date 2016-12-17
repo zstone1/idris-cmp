@@ -1,9 +1,9 @@
 module MinimumExt
-import PreorderReasoningExt
+import Util.PreorderReasoningExt
 import Data.So
-import MaybeExt
-import Projective
-import VectExt
+import Util.MaybeExt
+import Util.Projective
+import Util.VectExt
 import Decidable.Order  
 %access export 
 

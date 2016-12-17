@@ -1,12 +1,12 @@
 module CoinProblem
-import PreorderReasoningExt
+import Util.PreorderReasoningExt
 import Data.So
-import EqualExt
-import Projective
-import VectExt
-import FoldExt
-import MinimumExt
-import NatExt
+import Util.EqualExt
+import Util.Projective
+import Util.VectExt
+import Util.FoldExt
+import Util.MinimumExt
+import Util.NatExt
 import Decidable.Order
 %default total
 

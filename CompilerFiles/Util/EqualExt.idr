@@ -1,5 +1,5 @@
 module EqualExt
-import PreorderReasoningExt
+import Util.PreorderReasoningExt
 %access export
 
 |||Merges two equalities by applying the left and right sides to the given 2-ary function.

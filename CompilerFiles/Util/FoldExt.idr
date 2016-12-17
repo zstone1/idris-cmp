@@ -1,6 +1,6 @@
 module FoldExt
-import PreorderReasoningExt
-import VectExt
+import Util.PreorderReasoningExt
+import Util.VectExt
 %default total
 %access export
 
