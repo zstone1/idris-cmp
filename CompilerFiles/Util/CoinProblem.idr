@@ -1,9 +1,12 @@
 module CoinProblem
-import Syntax.PreorderReasoning
+import PreorderReasoningExt
 import Data.So
+import EqualExt
 import Projective
-import Data.Vect
-import FoldTheorems
+import VectExt
+import FoldExt
+import MinimumExt
+import NatExt
 import Decidable.Order
 %default total
 
@@ -63,12 +66,12 @@ implementation Show (Change cur amt) where
 
 |||Given change for n and change for m, I can combine and make change for n+m
 MergeChange : (c1 : Change cur n) -> (c2 : Change cur m) -> Change cur (n + m)
-MergeChange (MkChange {amt = amt1} _ a1 const1) (MkChange {amt = amt2} _ a2 const2) = 
-  let amtValid = 
+MergeChange (MkChange {amt = amt1} _ a1 const1) (MkChange {amt = amt2} _ a2 const2) = with Syntax.PreorderReasoning.Equal
+    let amtValid = 
     (amt1 + amt2)       ={ MergeEqualities (+) (amtCheck const1) (amtCheck const2) }=
     (cSum a1 + cSum a2) ={ CSumDistr a1 a2 }= 
     (cSum (a1 ++ a2))   QED in
-  MkChange _ (a1 ++ a2) (ValidateChange amtValid) 
+      MkChange _ (a1 ++ a2) (ValidateChange amtValid)
 
 |||Does the obvious then when the amount of change is a value for a coin.
 total
@@ -161,14 +164,16 @@ AtLeastOneCoin : (s: Change cur (S amt)) -> LTE 1 (getCoins s)
 AtLeastOneCoin {amt} (MkChange _ [] x) = absurd$ sym$ amtCheck x
 AtLeastOneCoin {amt} (MkChange _ (a::as) x) = LTESucc LTEZero
 
-
+lteMinusOne : {auto q:LTE m (S n)} -> LTE 1 m -> LTE ((S n) - m) n
 mutual 
   GiveChangeMinimizes : {auto q: LTE amt welf} -> (s: Change cur amt) -> LTE (getCoins$ GiveChangeI cur amt welf {q}) (getCoins s)
   mapThroughMinimizes : {q: LTE (S k) welf} -> {q' : Not $ Elem (S(S k)) (getDenoms cur)} -> (s: Change cur (S(S k))) -> 
                                      LTE (getCoins (minElemBy @{inht} {po=LTE} getCoins (mapElemPrf (mapThrough {k}{cur})))) (getCoins s)
   
-  
-  addCoinToMin : (c:Coin cur) -> LTE (getCoins $ GiveChangeI cur (amt+(getValue c)) welf {q=q1}) (S(getCoins $ GiveChangeI cur amt welf {q=q2}))
+ -- this signature is wrong: I need to reconcile k and S(k) in the definition of mapThrough. 
+  addCoinToMin : (amt : Nat) -> (c:Coin cur) -> LTE 
+                 (getCoins $ minElemBy @{inht} {po=LTE} getCoins (mapElemPrf (mapThrough {k=(getValue c) + amt}{cur}{q=q1}))) 
+                 (S(getCoins $ GiveChangeI cur amt welf {q=q2}))
 
   smallChangeCands : {c:Coin cur} -> (S (S k) = cSum (c :: c' :: cs)) -> Elem (getValue c) (snd $ filterCandsWithPrf cur (S (S k)))
 
@@ -182,39 +187,51 @@ mutual
         void $ q' $ rewrite lem in elemprf
 
   mapThroughMinimizes {cur} {welf} {k} {q} {q'} (MkChange _ (c::c'::cs) constr) =
+    let chng = (MkChange _ (c::c'::cs) constr) in
     let cval = (getValue c) in
     let csumval = cSum (c'::cs) in
-    let p1 = (S(S k))                  ={ amtCheck constr }=
-             (cSum (c::c'::cs))        ={ sym $ CSumDistr [c] (c'::cs) }=
+    let p1 : (_ = _) = (S(S k))        =[ amtCheck constr ]=
+             (cSum (c::c'::cs))        =[ CSumDistr [c] (c'::cs) ]=
              ((cval + 0) + csumval)    =[ plusZeroRightNeutral cval ]= 
              (cval + csumval)          QED in
 
-    let p2 = (cval)                    ={ lteAddRight cval }=
+    let p2 : (LTE _ _ ) = (cval)       ={ lteAddRight cval }=
              (cval + csumval)          QED in
 
-    let p2'= (cval +0)                 =[ plusZeroRightNeutral cval ]=
+    let p2': (LTE _ _) = (cval +0)     =[ plusZeroRightNeutral cval ]=
              (cval)                    ={ p2 }=
              (cval + csumval)          QED in
 
-    let p3 = (cval)                    ={ p2 }=
+    let p3 : (LTE _ _) = (cval)        ={ p2 }=
              (cval + csumval)          =[ sym p1 ]=
              (S(S k))                  QED in
 
-    let p5 = (S(S k) - cval)                  ={ cong {f=\e=>minus e cval} p1 }= 
+    let p5 : (_=_) = (S(S k) - cval)          ={ cong {f=\e=>minus e cval} p1 }= 
              ((cval + csumval) - cval)        ={ cong {f = minus (cval + csumval)} $ sym $ plusZeroRightNeutral cval }=
              ((cval + csumval) - (cval +0))   ={ plusMinusLeftCancel cval csumval Z }=
              (csumval - 0)                    ={ minusZeroRight csumval }= 
              (csumval)                        QED in
-    let p6 : (S(S k) - cval `LTE` welf) = ?lemma_2 in
-    let prev = MkChange _ (c'::cs) (ValidateChange p5) in
-    let recMin = GiveChangeMinimizes {amt=(S(S k) - cval)} {q=p6} prev in
-     
-    let p7 : (getCoins (MkChange _ (c::c'::cs) constr) = S(getCoins prev)) = ?lemma_3 in
-    let p8 : (getCoins $ GiveChangeI cur (S(S k)) welf {
+    let p6 : (S(S k) - cval `LTE` welf) = 
+             (S(S k) - cval) ={ lteMinusOne (notZero (snd c)) }= 
+             (S k)           ={ q }=
+             (welf)          QED in
+    let p6' : (csumval `LTE` welf) = rewrite sym p5 in p6 in 
+    let p7 : (csumval = sum (map getValue (c'::cs))) = Refl in
+    let recMin = GiveChangeMinimizes {amt=csumval} {q=p6'}( MkChange _ (c'::cs) (ValidateChange p7)) in
+    
+    let p9 : (LTE _ _ ) = 
+      ( getCoins $ minElemBy {po=LTE} getCoins (mapElemPrf (mapThrough {k}{cur}{q})))
+        ={ ?l1 }=
+      ( S $ getCoins $ GiveChangeI cur csumval welf {q=p6'} )                            
+        ={LTESucc recMin}=
+      ( S $ getCoins ( MkChange _ (c'::cs) (ValidateChange p7)))                                                        
+        ={lteRefl}=
+      ( getCoins $ MkChange _ (c::c'::cs) constr)
+        QED in
+
 --    let lem1 = smallChangeCands (amtCheck constr) in
 --    let mapped = mapThrough lem1 {k} {cur} in 
-        ?foo 
-
+        p9
 
   GiveChangeMinimizes {amt = Z} {cur}s = LTEZero
   GiveChangeMinimizes {amt = (S(S k))} {welf = Z} {q} s = absurd q

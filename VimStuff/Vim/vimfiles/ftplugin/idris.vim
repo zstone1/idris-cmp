@@ -15,13 +15,27 @@ setlocal commentstring=--%s
 let idris_response = 0
 let b:did_ftplugin = 1
 
+
+function! GetIdrisDir()
+  if exists("g:idris_root_file")
+    return fnamemodify(g:idris_root_file, ":h")
+  else
+    return getcwd()
+endfunction
+
+function! GetIdrisFile()
+  if exists("g:idris_root_file")
+     return g:idris_root_file
+  else 
+     return expand("%:p")
+endfunction
 "becuase the repl may not be in the right
 "directory, it may not find all the local
 "dependencies. That can lead to sadness.
 "So we make sure to always move the repl
 " to the current directory.
 function! s:IdrisCommand(...)
-  let cdcmd = s:IdrisCommandInt([":cd", getcwd()])
+  let cdcmd = s:IdrisCommandInt([":cd", GetIdrisDir()])
   if(!(cdcmd is ""))
     return cdcmd
   endif
@@ -88,7 +102,7 @@ endfunction
 
 function! IdrisReload(q)
   w
-  let file = expand("%:p")
+  let file = GetIdrisFile()
   let tc = s:IdrisCommand(":l", file)
   if (! (tc is ""))
     call IWrite(tc)
@@ -122,6 +136,20 @@ function! IdrisShowType()
   else
     let ty = s:IdrisCommand(":t", word)
     call IWrite(ty)
+  endif
+  return tc
+endfunction
+
+function! IdrisGetCallers()
+  w
+  let word = expand("<cword>")
+  let cline = line(".")
+  let tc = IdrisReloadToLine(cline)
+  if( ! (tc is ""))
+    echo tc
+  else
+    let cw = s:IdrisCommand(":wc", word)
+    call IWrite(cw)
   endif
   return tc
 endfunction
@@ -297,15 +325,13 @@ endfunction
 
 function! IdrisEval()
   w
-  let tc = IdrisReload(1)
-  if (tc is "")
-     let expr = input ("Expression: ")
-     let result = s:IdrisCommand(expr)
-     call IWrite(" = " . result)
-  endif
+k let expr = input ("Expression: ")
+  let result = s:IdrisCommand(expr)
+  call IWrite(" = " . result)
 endfunction
 
 nnoremap <buffer> <silent> <LocalLeader>t :call IdrisShowType()<ENTER>
+nnoremap <buffer> <silent> <LocalLeader>z :call IdrisGetCallers()<ENTER>
 nnoremap <buffer> <silent> <LocalLeader>r :call IdrisReload(0)<ENTER>
 nnoremap <buffer> <silent> <LocalLeader>c :call IdrisCaseSplit()<ENTER>
 nnoremap <buffer> <silent> <LocalLeader>d 0:call search(":")<ENTER>b:call IdrisAddClause(0)<ENTER>w
