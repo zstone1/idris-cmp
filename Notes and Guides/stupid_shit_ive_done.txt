@@ -9,4 +9,10 @@ vimscript isn't that hard. It's wierd, but it's easy enough to edit plugins.
 
 File hierarchy is linked to import statements.
 
+When buildling files in idris, ibc files are by default placed adjacent to the
+file. This is not optimal. What works better is to use the --ibcsubdir flag
+when starting up idris to set a directory for all of the built files. It is
+finicky, but it works when using a reasonable hierarchay of projects, and
+explicit references to all imports, relative to a root file. 
+
 

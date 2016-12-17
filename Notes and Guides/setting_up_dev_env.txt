@@ -145,14 +145,18 @@ function! s:IdrisCommandInt(args)
   return system("idris --client " . idriscmd)
 endfunction
 
-I'm going to put in a pull request for this. We'll see if they laugh me out of the room.
+In practice, it's make sense to have a "root" file, that references all of
+your other files (maybe though other project level root files and public
+exports). To achieve that, I have added a new vim variable
+"g:idris_root_file", and am using that file location to determine the folder
+and file to reload each time.
 
 Phase 4) installing packages
 Idris has commands for --build, --install, and --clean. I have tried this, and
 it certainly put files in what seem like the right places in the idris/lib or
-something, but I still can't seem to reference them.
-
-TODO: WTF how does this work. 
+something. You can then initialize idris with the command 
+"idris -p contrib" or "idris -p lightyear", and it will find those packages
+available as imports from code. 
 
 
 
