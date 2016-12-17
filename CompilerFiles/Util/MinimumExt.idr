@@ -1,4 +1,4 @@
-module MinimumExt
+module Util.MinimumExt
 import Util.PreorderReasoningExt
 import Data.So
 import Util.MaybeExt

@@ -7,6 +7,8 @@ set directory=C:/vimhelp/swap//
 set undodir=C:/vimhelp/undo//
 set backupdir=C:/vimhelp/backup//
 
+let g:idris_root_file="C:/Dropbox/Compiler/CompilerFiles/Root.idr"
+
 syntax on
 filetype on
 filetype plugin indent on

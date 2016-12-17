@@ -103,6 +103,7 @@ endfunction
 function! IdrisReload(q)
   w
   let file = GetIdrisFile()
+  echo file
   let tc = s:IdrisCommand(":l", file)
   if (! (tc is ""))
     call IWrite(tc)
