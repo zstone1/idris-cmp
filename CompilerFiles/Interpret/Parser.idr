@@ -1,10 +1,10 @@
 module Parser
-import Interpret.C0Expr
+import Interpret.ExprPrim
 import Lightyear
 import Lightyear.Char
 import Lightyear.Strings
 %access private
-
+%default partial
 
 rtn : Parser ()
 rtn = token "return"
@@ -51,6 +51,7 @@ parseProgram' = do
   pure $ MkProgramPrim funcs
 
 export
+total --assert total because strings have finite length.
 parseProgram : String -> Either String ProgramPrim
 parseProgram = assert_total $ parse parseProgram' 
 
