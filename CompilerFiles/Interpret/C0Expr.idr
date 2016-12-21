@@ -7,38 +7,62 @@ data C0Type = C0Int
             | C0Bool 
             | C0Str 
             | C0Char
-            | C0Func C0Type C0Type
+
+data Access = Public | Private
 
 Show C0Type where
   show C0Int = "C0Int"
   show C0Bool = "C0Bool"
   show C0Str = "C0Str"
   show C0Char = "C0Char"
-  show (C0Func a b) = (show a) ++ " -> " ++ (show b)
 
-using(C: Vect n C0Type)
+|||An untyped representation of the contents of a function
+data ExprPrim : Type where
+  MkIntLit : Int -> ExprPrim
+  MkStrLit : String -> ExprPrim
 
-  data HasType : (i : Fin n) -> Vect n C0Type -> C0Type -> Type where
-    Stop : HasType FZ (t :: C)  t
-    Pop : HasType k C t -> HasType (FS k) (u::C) t
+data ExprTyped : Type where
 
-  data C0Expr : Vect n C0Type -> C0Type -> Type where
---    Var : HasType i C t -> C0Expr C t
-    IntLit : Integer -> C0Expr C C0Int
---    StrLit : String -> C0Expr C C0Str
---    CharLit: Char -> C0Expr C C0Char
---    BoolLit: Bool -> C0Expr C C0Bool
-    Func : C0Expr C (C0Func a b) -> C0Expr C a -> C0Expr C b
-    
-  dsl C0
-      variable = Var
-      index_first = Stop
-      index_next = Pop
+Show ExprPrim where
+  show (MkIntLit x) = "intLit: " ++ show x
+  show (MkStrLit x) = "strLit: " ++ show x
+
+|||An untyped represetnation of the metadata of a function
+record FuncPrim where 
+  constructor MkFuncPrim
+  access : String
+  rtnTy : String
+  name : String
+  params : Vect n (String, String)
+  defn : ExprPrim
+
+record FuncTyped where
+  constructor MkFuncTyped
+  access : Access
+  rtnTy : C0Type
+  name : String
+  params : Vect n (C0Type, String)
+  defn : ExprTyped
+
+Show FuncPrim where
+  show x = "access : " ++ (show $ access x) ++
+           "rtnTy : " ++ (show $ rtnTy x) ++
+           "name : " ++ (show $ name x) ++
+           "params: " ++ (show $ params x) ++
+           "defn: " ++ (show $ defn x) 
+
+record ProgramPrim where
+  constructor MkProgramPrim
+  funcs : List FuncPrim
   
+Show ProgramPrim where
+  show x = "funcs : " ++ (show $ funcs x)
 
-  Show (C0Expr c t) where
-    show (IntLit i) = show i
-    show (Func f a) = show f ++ " ( " ++ show a ++ " ) "
+
+
+
+
+
 
 
 

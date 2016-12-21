@@ -326,7 +326,7 @@ endfunction
 
 function! IdrisEval()
   w
-k let expr = input ("Expression: ")
+  let expr = input ("Expression: ")
   let result = s:IdrisCommand(expr)
   call IWrite(" = " . result)
 endfunction
