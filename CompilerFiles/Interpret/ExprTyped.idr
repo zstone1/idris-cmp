@@ -18,18 +18,35 @@ record FuncTyped where
   params : Vect n (C0Type, String)
   defn : (rtnTy : C0Type ** ExprTyped rtnTy)
 
+arity : FuncTyped -> Nat
+arity f = length $ params f
+
+MainName : String
+MainName = "main"
+
+record IsMain (f: FuncTyped) where
+  constructor MainWit
+  nameMain : name f = MainName
+  mainType : fst $ defn $ f = C0Int
+  isPublic : access f = Public
+  mainParams : arity f = Z
+
+getMainFunc : IsMain f -> FuncTyped
+getMainFunc {f} _ = f
+
 record ProgramTyped where
   constructor MkProgram
   funcs : List FuncTyped
-
-Uninhabited (C0Int = C0Str) where
-  uninhabited Refl impossible
+  main : IsMain f
 
 DecEq C0Type where
   decEq C0Int C0Int = Yes Refl
+  decEq C0Int _ = No (believe_me()) --Find a better way to build these trivial DecEq types
   decEq C0Str C0Str = Yes Refl
-  decEq C0Int C0Str = No absurd
-  decEq C0Str C0Int = No (absurd . sym)
+  decEq C0Str _ = No (believe_me())
+
+DecEq AccessMod where
+  decEq Public Public = Yes Refl
 
 Show C0Type where
   show C0Int = "C0Int"
