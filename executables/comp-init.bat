@@ -1,0 +1,1 @@
+%~dp0\..\idris\idris.exe -p effects -p lightyear -p contrib --ibcsubdir Bin
