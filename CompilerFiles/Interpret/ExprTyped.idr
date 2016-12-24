@@ -24,15 +24,11 @@ arity f = length $ params f
 MainName : String
 MainName = "main"
 
-record IsMain (f: FuncTyped) where
-  constructor MainWit
-  nameMain : name f = MainName
-  mainType : fst $ defn $ f = C0Int
-  isPublic : access f = Public
-  mainParams : arity f = Z
+data IsMain : FuncTyped -> Type where
+  EmptyMain : IsMain (MkFuncTyped Public MainName [] (C0Int ** _))
 
 getMainFunc : IsMain f -> FuncTyped
-getMainFunc {f} _ = f
+getMainFunc {f} = const f
 
 record ProgramTyped where
   constructor MkProgram

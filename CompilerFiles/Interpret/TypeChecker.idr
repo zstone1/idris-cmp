@@ -51,17 +51,11 @@ convertFunc x = do
   params <- traverse convertParam $ params x
   pure $ MkFuncTyped access name params (t ** defn)
 
-private 
-q : DecEq a => (f : FuncTyped) -> (g: FuncTyped -> a) -> (a2:a) -> Dec (g f = a2)
-q f g a2 = decEq (g f) a2
+checkMain : (f:FuncTyped) -> Maybe (IsMain f)
+checkMain (MkFuncTyped Public MainName [] (C0Int ** _)) = Just EmptyMain
+checkMain _ = Nothing
 
-checkMain : (f: FuncTyped) -> Maybe (IsMain f)
-checkMain f with (q f name MainName, q f (fst . defn) C0Int, q f access Public, q f arity Z)
-  | (Yes p1, Yes p2, Yes p3, Yes p4) = Just (MainWit p1 p2 p3 p4)
-  | _ = Nothing
-
-
-getMain : List FuncTyped -> TypeErrEff {ty} (t ** IsMain t)
+getMain : (l: List FuncTyped) -> (TypeErrEff {ty} (t ** IsMain t)
 getMain fs with (mapMaybe (\f => [(f $* checkMain)]) fs) 
   | [] = raise (MkTypeErr "Main method is required")
   | (x :: xs) = pure x 
