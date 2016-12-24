@@ -55,7 +55,7 @@ checkMain : (f:FuncTyped) -> Maybe (IsMain f)
 checkMain (MkFuncTyped Public MainName [] (C0Int ** _)) = Just EmptyMain
 checkMain _ = Nothing
 
-getMain : (l: List FuncTyped) -> (TypeErrEff {ty} (t ** IsMain t)
+getMain : (l: List FuncTyped) -> TypeErrEff {ty} (t ** IsMain t)
 getMain fs with (mapMaybe (\f => [(f $* checkMain)]) fs) 
   | [] = raise (MkTypeErr "Main method is required")
   | (x :: xs) = pure x 
