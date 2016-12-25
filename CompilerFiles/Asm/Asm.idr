@@ -1,5 +1,7 @@
 module Asm
 import Util.UtilRoot
+%access public export
+
 
 data RegId = RAX
            | RCX
@@ -12,13 +14,13 @@ data RegId = RAX
            | EAX
 
 data Prefix = Dec
-            | Hex
-            | Oct
-            | Bin
+--            | Hex
+--            | Oct
+--            | Bin
 
 record ImmVal where
   constructor MkImm
-  val : Nat
+  val : Int
   pre : Prefix
 
 
@@ -26,7 +28,8 @@ data Opr: Type where
   Reg : RegId -> Opr
   Imm : ImmVal -> Opr
   MemReg : RegId -> Opr
-  MemImm : ImmVal -> Opr
+
+syntax "@"[v]"@" = Imm $ MkImm v Dec
 
 data Instr : Type where
   Mov : Opr -> Opr -> Instr
@@ -39,3 +42,47 @@ record AsmProgram where
   global : String
   instructs : List Instr
   
+Show RegId where
+ show RAX = "rax"
+ show RCX = "rcx"
+ show RDX = "rdx"
+ show RBX = "rbx"
+ show RSP = "rsp"
+ show RBP = "rbp"
+ show RSI = "rsi"
+ show RDI = "rdi"
+ show EAX = "eax" 
+
+Show ImmVal where
+  show (MkImm v p) = show v --TODO: use hex for everything.
+
+Show Opr where
+  show (Reg r) = show r
+  show (Imm i) = show i
+  show (MemReg m) = "[" ++ show m ++ "]"
+
+pad10 : String -> String
+pad10 = padSpace 10
+
+pad5 : String -> String
+pad5 = padSpace 5
+
+Show Instr where
+  show (Mov o1 o2) = (pad10 "mov") ++ (pad5 (show o1)) ++ (show o2)
+  show Syscall = "syscall"
+  show (Xor o1 o2) = (pad10 "xor") ++ (pad5 (show o1)) ++ (show o2)
+
+Show AsmProgram where
+  show (MkAsm glob instructs) = 
+    "global " ++ glob ++ "\n" ++ 
+    "\n" ++
+    "section .text" ++
+    glob ++ ": " ++
+    unlines (map show instructs)
+
+
+
+
+
+
+

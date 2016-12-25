@@ -6,6 +6,7 @@ import public Util.EffectExt
 import public Util.SyntaxExt
 import public Util.PairExt
 import public Util.MaybeExt
+import public Util.StringExt
 import public Util.MinimumExt
 import public Util.NatExt
 import public Util.PreorderReasoningExt
