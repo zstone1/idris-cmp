@@ -20,7 +20,7 @@ data NonZero : Nat -> Type where
 
 data GTE2 : Nat -> Type where
   MkGTE2 : GTE2 (S(S k))
-
+{-
 |||given the coefficents of the base n expansion, produces the value of the number
 |||along with a helpful helpful statement about well-foundedness
 fromBase : (Vect k (Fin base)) -> (n:Nat ** LTE n (power base (S k)))
@@ -41,9 +41,9 @@ toBaseN Z = AsBase []
 toBaseN {b = S(S b')} {q=MkGTE2} (S k) with (toBaseN {b=S(S b')} k)
   toBaseN _ | AsBase [] = AsBase [FS FZ]
   toBaseN _ | AsBase (c::cs) = ?l1
-  
+  -}  
 
-toHex : (x:Nat) -> (Base 16 x)
+--toHex : (x:Nat) -> (Base 16 x)
 
 
 

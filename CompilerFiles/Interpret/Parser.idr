@@ -1,4 +1,5 @@
 module Parser
+import Util.UtilRoot
 import Interpret.ExprPrim
 import Lightyear
 import Lightyear.Char
@@ -52,16 +53,9 @@ parseProgram' = do
 
 export
 total --assert total because strings have finite length.
-parseProgram : String -> Either String ProgramPrim
-parseProgram = assert_total $ parse parseProgram' 
+parseProgram : String -> Comp ProgramPrim
+parseProgram s = assert_total $ case parse parseProgram' s of
+                                   Left e => raise e
+                                   Right p => pure p
 
-Test1 : String
-Test1 = case [|show $ parse parseExpr "return 123;" |] of
-             Left s => s
-             Right s => s
-
-Test3 : String 
-Test3 = case [|show $ parse parseFunc "public \n int Foo(t a, tt b) { return 5;}"|] of
-             Left s => s
-             Right s => s
 

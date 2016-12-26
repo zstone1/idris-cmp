@@ -68,16 +68,16 @@ pad5 : String -> String
 pad5 = padSpace 5
 
 Show Instr where
-  show (Mov o1 o2) = (pad10 "mov") ++ (pad5 (show o1)) ++ (show o2)
-  show Syscall = "syscall"
-  show (Xor o1 o2) = (pad10 "xor") ++ (pad5 (show o1)) ++ (show o2)
+  show (Mov o1 o2) = pad5 "" ++ pad10 "mov" ++ (pad5 (show o1)) ++ "," ++ (show o2)
+  show Syscall = pad5 "" ++ "syscall"
+  show (Xor o1 o2) = pad5 "" ++ pad10 "xor" ++ (pad5 (show o1)) ++ "," ++ (show o2)
 
 Show AsmProgram where
   show (MkAsm glob instructs) = 
     "global " ++ glob ++ "\n" ++ 
     "\n" ++
-    "section .text" ++
-    glob ++ ": " ++
+    "section .text \n" ++
+    glob ++ ": \n" ++
     unlines (map show instructs)
 
 
