@@ -1,5 +1,6 @@
 module ExprTyped
 import Data.Vect
+import Data.List
 %access public export
 
 data C0Type = C0Int 
@@ -21,19 +22,18 @@ record FuncTyped where
 arity : FuncTyped -> Nat
 arity f = length $ params f
 
-MainName : String
-MainName = "main"
+--MainName : String
+--MainName = "main"
 
-data IsMain : FuncTyped -> Type where
-  EmptyMain : IsMain (MkFuncTyped Public MainName [] (C0Int ** _))
+data IsMain : FuncTyped -> List FuncTyped -> Type where
+  EmptyMain : List.Elem  (MkFuncTyped Public "main" [] (C0Int ** e)) fs -> 
+              IsMain (MkFuncTyped Public "main" [] (C0Int ** e)) fs
 
-getMainFunc : IsMain f -> FuncTyped
+getMainFunc : IsMain f fs -> FuncTyped
 getMainFunc {f} = const f
 
-record ProgramTyped where
-  constructor MkProgram
-  funcs : List FuncTyped
-  main : IsMain f
+data ProgramTyped : Type where
+  MkProgram : (fs : List FuncTyped) -> IsMain f fs -> ProgramTyped 
 
 DecEq C0Type where
   decEq C0Int C0Int = Yes Refl
@@ -63,5 +63,5 @@ Show FuncTyped where
            "defn: " ++ (show $ snd $ defn x) 
 
 Show ProgramTyped where
-  show x = "funcs : " ++ (show $ funcs x)
+  show (MkProgram funcs _) = "funcs : " ++ (show $ funcs) 
 

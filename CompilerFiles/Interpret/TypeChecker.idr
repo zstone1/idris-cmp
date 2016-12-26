@@ -3,6 +3,7 @@ import Interpret.ExprTyped
 import Interpret.ExprPrim
 import Effect.Exception
 import Util.UtilRoot
+import Data.List
 
 convertAccess : String -> Comp AccessMod
 convertAccess s with (s)
@@ -40,14 +41,12 @@ convertFunc x = do
   params <-getEff $ traverse (monadEffT . convertParam)  $ params x
   pure $ MkFuncTyped access name params (t ** defn)
 
-checkMain : (f:FuncTyped) -> Maybe (IsMain f)
-checkMain (MkFuncTyped Public MainName [] (C0Int ** _)) = Just EmptyMain
-checkMain _ = Nothing
 
-getMain : (l: List FuncTyped) -> Comp {ty} (t ** IsMain t)
-getMain fs with (mapMaybe (\f => [(f $* checkMain)]) fs) 
-  | [] = raise "Main method is required"
-  | (x :: xs) = pure x 
+getMain : (l: List FuncTyped) -> Comp (t ** IsMain t l)
+getMain [] = raise "Main method is required"
+getMain ((MkFuncTyped Public "main" [] (C0Int ** _)):: xs) = pure $  (_** EmptyMain Here)
+getMain (x ::xs) = do (_**(EmptyMain elem)) <- getMain xs
+                      pure $ (_** EmptyMain (There elem))
 
 export
 convertProgram : ProgramPrim -> Comp ProgramTyped
