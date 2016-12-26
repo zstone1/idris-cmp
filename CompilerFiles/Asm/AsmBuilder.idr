@@ -16,7 +16,9 @@ buildMain {f = MkFuncTyped Public _ [] (C0Int ** (MkIntLit i))} (EmptyMain _) =
       Xor (Reg RDI) (Reg RDI),
       Syscall
   ] in
-     MkAsm (MkDirectives (Just "_start")) (MkConsts [reserve]) [MkAsmFunc instrs "_start"]
+     MkAsm (MkDirectives (Just "_start")) 
+           [reserve] 
+           [MkAsmFunc instrs "_start"]
 
 export
 toAsm : ProgramTyped -> AsmProgram

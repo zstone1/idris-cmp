@@ -30,9 +30,10 @@ record Reservation where
   size : MemSize
   val : ReserveVal
 
-record Reserves where
-  constructor MkConsts
-  reserves : List Reservation
+-------- Directives
+record Directives where
+  constructor MkDirectives
+  global : Maybe String
 
 --------- Instruction
 record ImmVal where
@@ -58,24 +59,31 @@ record AsmFunc where
   instrs : List Instr
   name : String
 
--------- Directives
-record Directives where
-  constructor MkDirectives
-  global : Maybe String
-
+-------- Programs
 data AsmProgram : Type where
-  MkAsm : Directives -> Reserves -> List AsmFunc -> AsmProgram
+  MkAsm : Directives -> List Reservation -> List AsmFunc -> AsmProgram
+
+InitPrgm : AsmProgram
+InitPrgm = MkAsm (MkDirectives Nothing) [] []
   
+
+
+data AsmState : AsmProgram -> Type where
+  Init : AsmState InitPrgm
+  AddReserve : (r : Reservation) -> AsmState (MkAsm d rs fs) -> AsmState (MkAsm d (r::rs) fs)
+  AddFunc : (f : AsmFunc) -> AsmState (MkAsm d rs fs) -> AsmState (MkAsm d rs (f ::fs))
+   
+
 Show RegId where
- show RAX = "rax"
- show RCX = "rcx"
- show RDX = "rdx"
- show RBX = "rbx"
- show RSP = "rsp"
- show RBP = "rbp"
- show RSI = "rsi"
- show RDI = "rdi"
- show EAX = "eax" 
+  show RAX = "rax"
+  show RCX = "rcx"
+  show RDX = "rdx"
+  show RBX = "rbx"
+  show RSP = "rsp"
+  show RBP = "rbp"
+  show RSI = "rsi"
+  show RDI = "rdi"
+  show EAX = "eax" 
 
 Show MemSize where
   show DB = "db"
@@ -117,12 +125,12 @@ Show AsmFunc where
     unlines (map show instrs)
 
 Show AsmProgram where
-  show (MkAsm directives rs funcs) = 
+  show (MkAsm directives rs fs) = 
     show directives ++
     "\n" ++
-    unlines (map show funcs) ++
+    unlines (map show fs) ++
     "\n" ++
-    unlines (map show (reserves rs))
+    unlines (map show rs)
 
 
 
