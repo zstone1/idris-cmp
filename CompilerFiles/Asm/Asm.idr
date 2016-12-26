@@ -40,21 +40,21 @@ record ImmVal where
   val : Int
   pre : Prefix
 
-data Opr : Reserves -> Type where
-  Reg : RegId -> Opr rs
-  Imm : ImmVal -> Opr rs
-  Res : {rs: Reserves} -> (r:Reservation) -> {auto q:List.Elem r (reserves rs)} -> Opr rs
+data Opr : Type where
+  Reg : RegId -> Opr
+  Imm : ImmVal -> Opr 
+  Res : (r:Reservation) -> Opr
 
 syntax "@"[v]"@" = Imm $ MkImm v Dec
 
-data Instr : Reserves -> Type where
-  Mov : Opr rs -> Opr rs -> Instr rs
-  Syscall : Instr rs
-  Xor : Opr rs -> Opr rs -> Instr rs
+data Instr :Type where
+  Mov : Opr -> Opr-> Instr
+  Syscall : Instr 
+  Xor : Opr -> Opr -> Instr 
 
 
 data AsmProgram : Type where
-  MkAsm : (start: String) -> (rs: Reserves) -> List (Instr rs) -> AsmProgram
+  MkAsm : (start: String) -> (rs: Reserves) -> List Instr -> AsmProgram
   
 Show RegId where
  show RAX = "rax"
@@ -79,7 +79,7 @@ Show Reservation where
 Show ImmVal where
   show (MkImm v p) = show v --TODO: use hex for everything.
 
-Show (Opr rs) where
+Show (Opr) where
   show (Reg r) = show r
   show (Imm i) = show i
   show (Res m) = name m
@@ -90,7 +90,7 @@ pad10 = padSpace 10
 pad5 : String -> String
 pad5 = padSpace 5
 
-Show (Instr rs) where
+Show (Instr) where
   show (Mov o1 o2) = pad5 "" ++ pad10 "mov" ++ (pad5 (show o1)) ++ "," ++ (show o2)
   show Syscall = pad5 "" ++ "syscall"
   show (Xor o1 o2) = pad5 "" ++ pad10 "xor" ++ (pad5 (show o1)) ++ "," ++ (show o2)

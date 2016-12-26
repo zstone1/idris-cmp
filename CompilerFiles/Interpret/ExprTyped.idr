@@ -29,8 +29,12 @@ data IsMain : FuncTyped -> List FuncTyped -> Type where
   EmptyMain : List.Elem  (MkFuncTyped Public "main" [] (C0Int ** e)) fs -> 
               IsMain (MkFuncTyped Public "main" [] (C0Int ** e)) fs
 
-getMainFunc : IsMain f fs -> FuncTyped
-getMainFunc {f} = const f
+mainFunc : IsMain f fs -> FuncTyped
+mainFunc {f} = const f
+
+mainElem : IsMain f fs -> Elem f fs
+mainElem (EmptyMain el) = el
+
 
 data ProgramTyped : Type where
   MkProgram : (fs : List FuncTyped) -> IsMain f fs -> ProgramTyped 
