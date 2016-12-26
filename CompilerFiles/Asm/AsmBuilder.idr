@@ -3,7 +3,7 @@ import Interpret.ExprTyped
 import Asm.Asm
 import Util.UtilRoot
 
-buildMain : IsMain f fs -> (Reserves, List Instr)
+buildMain : IsMain f fs -> AsmProgram
 buildMain {f = MkFuncTyped Public _ [] (C0Int ** (MkIntLit i))} (EmptyMain _) = 
   let reserve = MkReserve "rtn" DB (Num i) in
   let instrs = [
@@ -16,8 +16,8 @@ buildMain {f = MkFuncTyped Public _ [] (C0Int ** (MkIntLit i))} (EmptyMain _) =
       Xor (Reg RDI) (Reg RDI),
       Syscall
   ] in
-    (MkConsts [reserve], instrs)
+     MkAsm (MkDirectives (Just "_start")) (MkConsts [reserve]) [MkAsmFunc instrs "_start"]
 
 export
 toAsm : ProgramTyped -> AsmProgram
-toAsm (MkProgram funcs main) = uncurry (MkAsm "_start") (buildMain main)
+toAsm (MkProgram funcs main) = buildMain main

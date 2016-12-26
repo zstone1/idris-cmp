@@ -52,9 +52,19 @@ data Instr :Type where
   Syscall : Instr 
   Xor : Opr -> Opr -> Instr 
 
+-------- Functions
+record AsmFunc where
+  constructor MkAsmFunc
+  instrs : List Instr
+  name : String
+
+-------- Directives
+record Directives where
+  constructor MkDirectives
+  global : Maybe String
 
 data AsmProgram : Type where
-  MkAsm : (start: String) -> (rs: Reserves) -> List Instr -> AsmProgram
+  MkAsm : Directives -> Reserves -> List AsmFunc -> AsmProgram
   
 Show RegId where
  show RAX = "rax"
@@ -84,6 +94,11 @@ Show (Opr) where
   show (Imm i) = show i
   show (Res m) = name m
 
+
+Show Directives where
+  show (MkDirectives Nothing) = ""
+  show (MkDirectives (Just x)) = "global " ++ x
+
 pad10 : String -> String
 pad10 = padSpace 10
 
@@ -95,13 +110,17 @@ Show (Instr) where
   show Syscall = pad5 "" ++ "syscall"
   show (Xor o1 o2) = pad5 "" ++ pad10 "xor" ++ (pad5 (show o1)) ++ "," ++ (show o2)
 
-Show AsmProgram where
-  show (MkAsm start rs instructs) = 
-    "global " ++ start ++ "\n" ++ 
-    "\n" ++
+Show AsmFunc where
+  show (MkAsmFunc instrs name) = 
     "section .text \n" ++
-    start ++ ": \n" ++
-    unlines (map show instructs) ++ "\n" ++
+    name ++ ": \n" ++
+    unlines (map show instrs)
+
+Show AsmProgram where
+  show (MkAsm directives rs funcs) = 
+    show directives ++
+    "\n" ++
+    unlines (map show funcs) ++
     "\n" ++
     unlines (map show (reserves rs))
 
