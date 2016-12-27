@@ -10,7 +10,7 @@ buildMain {f = MkFuncTyped Public _ [] (C0Int ** (MkIntLit i))} (EmptyMain _) =
       Mov (Reg RAX) @1@,
       Mov (Reg RDI) @1@,
       Mov (Reg RSI) (Res reserve),
-      Mov (Reg RDX) @2@,
+      Mov (Reg RDX) @1@,
       Syscall,
       Mov (Reg EAX) @60@,
       Xor (Reg RDI) (Reg RDI),

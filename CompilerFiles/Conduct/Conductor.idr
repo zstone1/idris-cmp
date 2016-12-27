@@ -21,7 +21,6 @@ compileToFile' prgmFile name = do
   (Result prgm) <- readFile prgmFile | FError e => raise (show e)
   asm <- compile prgm
   let gen = show asm
-  putStrLn gen
   writeFile name gen 
   pure ()
 
