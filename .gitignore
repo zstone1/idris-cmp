@@ -1,5 +1,5 @@
 CompilerFiles/Bin/**
 CompilerFiles/Root.ibc
-CompilerFiles/Testing/asm/**
-CompilerFiles/Testing/comp
-CompilerFiles/results/**
+Testing/asm/**
+Testing/comp
+Testing/results/**
