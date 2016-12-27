@@ -1,4 +1,4 @@
-module UtilRoot
+module RootUtil
 import public Util.EqualExt
 import public Util.FoldExt
 import public Util.EitherExt

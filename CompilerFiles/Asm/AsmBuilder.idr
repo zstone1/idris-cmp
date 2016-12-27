@@ -1,7 +1,7 @@
 module AsmBuilder
-import Interpret.ExprTyped
+import TypeCheck.RootTypeCheck
 import Asm.Asm
-import Util.UtilRoot
+import Util.RootUtil
 
 buildMain : IsMain f fs -> AsmProgram
 buildMain {f = MkFuncTyped Public _ [] (C0Int ** (MkIntLit i))} (EmptyMain _) = 

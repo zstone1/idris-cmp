@@ -1,7 +1,8 @@
 module Conductor
-import Util.UtilRoot
-import Asm.AsmRoot
+import Util.RootUtil
+import Asm.RootAsm
 import Interpret.RootInterpret
+import TypeCheck.RootTypeCheck
 import Effect.File
 import Effect.StdIO
 import Control.IOExcept
@@ -10,7 +11,8 @@ compile : String -> Comp AsmProgram
 compile s = do
   parsed <- parseProgram s
   typed <- convertProgram parsed
-  pure $ toAsm typed
+  let assembled = toAsm typed
+  pure $ assembled
 
 
 export

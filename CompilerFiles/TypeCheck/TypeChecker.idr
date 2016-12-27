@@ -1,15 +1,16 @@
 module TypeChecker
-import Interpret.ExprTyped
-import Interpret.ExprPrim
+import Interpret.RootInterpret
+import TypeCheck.ExprTyped
 import Effect.Exception
-import Util.UtilRoot
+import Util.RootUtil
 import Data.List
+
 
 convertAccess : String -> Comp AccessMod
 convertAccess s with (s)
   | "public" = pure Public
   | _ = raise (s ++ " is not a valid access modifier")
-
+  
 convertExpr : ExprPrim -> Comp (t:C0Type ** ExprTyped t) 
 convertExpr e with (e)
   | (MkIntLit x) = pure (C0Int ** MkIntLit x)

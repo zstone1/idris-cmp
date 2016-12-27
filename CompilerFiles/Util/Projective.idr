@@ -39,10 +39,6 @@ public export
 data ProjLifted : (f: Type -> Type) -> (po: t->t->Type) -> f t -> f t -> Type where
   LiftToProj : Projective f => (po: t -> t -> Type) -> po (proj x) (proj y) -> ProjLifted f po x y
 
-public export 
-PairLift : (u:Type) -> (po : t->t-> Type) -> (u,t)->(u,t) -> Type
-PairLift u po = PairLift u po
-
 (Preorder t po, Projective f) => Preorder (f t) (ProjLifted f po)  where
   reflexive a = LiftToProj {f} po (reflexive $ proj a) 
   transitive a b c (LiftToProj _ x) (LiftToProj _ y) = 

@@ -1,5 +1,5 @@
 module Parser
-import Util.UtilRoot
+import Util.RootUtil
 import Interpret.ExprPrim
 import Lightyear
 import Lightyear.Char

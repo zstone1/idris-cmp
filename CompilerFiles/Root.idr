@@ -1,8 +1,9 @@
 module Main
-import Util.UtilRoot
+import Util.RootUtil
 import Interpret.RootInterpret
-import Asm.AsmRoot
-import Conduct.ConductRoot
+import TypeCheck.RootTypeCheck
+import Asm.RootAsm
+import Conduct.RootConduct
 import Effects
 import Effect.System
 import Effect.StdIO
