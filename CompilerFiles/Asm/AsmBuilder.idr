@@ -23,3 +23,4 @@ buildMain {f = MkFuncTyped Public _ [] (C0Int ** (MkIntLit i))} (EmptyMain _) =
 export
 toAsm : ProgramTyped -> AsmProgram
 toAsm (MkProgram funcs main) = buildMain main
+

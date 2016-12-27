@@ -14,8 +14,8 @@ import Control.IOExcept
 
 main' : SimpleEff.Eff () [SYSTEM, STDIO, FILE (), EXCEPTION String]
 main' = do [_, p, o] <- getArgs | [] => putStrLn "Can't happen"
-                                | [_] => putStrLn "neither program or out"
-                                | [_,_]=> putStrLn "only one of program or out"
+                                | [_] => putStrLn "neither in nor out arg"
+                                | [_,_]=> putStrLn "only one of in or out arg"
                                 | _ => putStrLn "Too many args"
            compileToFile' p o
 

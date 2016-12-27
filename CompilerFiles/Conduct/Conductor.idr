@@ -17,7 +17,8 @@ compile s = do
 
 export
 compileToFile' : String -> String -> Comp {l=[EXCEPTION String, STDIO, FILE ()]} ()
-compileToFile' prgm name = do 
+compileToFile' prgmFile name = do 
+  (Result prgm) <- readFile prgmFile | FError e => raise (show e)
   asm <- compile prgm
   let gen = show asm
   putStrLn gen
