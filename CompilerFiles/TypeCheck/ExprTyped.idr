@@ -17,7 +17,8 @@ record FuncTyped where
   access : AccessMod
   name : String
   params : Vect n (C0Type, String)
-  defn : (rtnTy : C0Type ** ExprTyped rtnTy)
+  rtnTy : C0Type
+  body : List (t : C0Type ** ExprTyped t)
 
 arity : FuncTyped -> Nat
 arity f = length $ params f
@@ -26,8 +27,8 @@ arity f = length $ params f
 --MainName = "main"
 
 data IsMain : FuncTyped -> List FuncTyped -> Type where
-  EmptyMain : List.Elem  (MkFuncTyped Public "main" [] (C0Int ** e)) fs -> 
-              IsMain (MkFuncTyped Public "main" [] (C0Int ** e)) fs
+  EmptyMain : List.Elem  (MkFuncTyped Public "main" [] C0Int b ) fs -> 
+              IsMain (MkFuncTyped Public "main" [] C0Int b ) fs
 
 mainFunc : IsMain f fs -> FuncTyped
 mainFunc {f} = const f
@@ -61,10 +62,10 @@ Show (ExprTyped t) where
 
 Show FuncTyped where
   show x = "access : " ++ (show $ access x) ++    "\n" ++
-           "rtnTy : " ++ (show $ fst $ defn x) ++ "\n" ++
+           "rtnTy : " ++ (show $ rtnTy x) ++ "\n" ++
            "name : " ++ (show $ name x) ++        "\n" ++
            "params: " ++ (show $ params x) ++     "\n" ++
-           "defn: " ++ (show $ snd $ defn x) 
+           "body: " ++ (show $ body x) 
 
 Show ProgramTyped where
   show (MkProgram funcs _) = "funcs : " ++ (show $ funcs) 

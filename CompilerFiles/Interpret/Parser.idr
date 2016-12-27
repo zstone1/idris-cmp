@@ -21,8 +21,8 @@ parseLit =   parseIntLit
          <|> parseStrLit
          <?> "Failed to parse literal"
           
-parseExpr : Parser ExprPrim
-parseExpr = rtn *> parseLit <* semi
+parseBody : Parser ExprPrim
+parseBody = rtn *> parseLit <* semi
 
 parsePair : Parser (String, String)
 parsePair = do 
@@ -38,12 +38,12 @@ parseFunc = do
   ty <- some letter <* token " "
   name <- some letter <* spaces
   params <- between (token "(") (token ")") (parsePair `sepBy` (token ","))
-  defn <- between (token "{") (token "}") parseExpr
+  defn <- between (token "{") (token "}") parseBody
   let access' = pack access
   let ty' = pack ty
   let name' = pack name
   let params' = fromList params
-  pure $ MkFuncPrim access' ty' name' params' defn
+  pure $ MkFuncPrim access' ty' name' params' [defn]
 
 parseProgram' : Parser (ProgramPrim)
 parseProgram' = do 

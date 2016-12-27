@@ -15,7 +15,7 @@ record FuncPrim where
   rtnTy : String
   name : String
   params : Vect n (String, String)
-  defn : ExprPrim
+  body : List ExprPrim
 
 
 record ProgramPrim where
@@ -32,7 +32,7 @@ Show FuncPrim where
            "rtnTy : " ++ (show $ rtnTy x) ++   "\n" ++
            "name : " ++ (show $ name x) ++     "\n" ++
            "params: " ++ (show $ params x) ++  "\n" ++
-           "defn: " ++ (show $ defn x) 
+           "body: " ++ (show $ body x) 
  
 Show ProgramPrim where
   show x = "funcs : " ++ (show $ funcs x)
