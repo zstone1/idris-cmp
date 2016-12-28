@@ -30,13 +30,12 @@ buildExpr (Return i) = do
 
 buildMain : IsMain f fs -> Comp AsmProgram
 buildMain {f = SFunc _ _ (MkFuncTyped Public "main" [] b)} (EmptyMain _) with (b)
-  | [] = raise "no methods"
   | ((_** x)::[]) = do
       (instrs, reservs) <- buildExpr x
       pure$ MkAsm (MkDirectives (Just "_start"))
             reservs
             [MkAsmFunc instrs "_start"]
-  | (x::x'::xs) = raise "multiple args"
+  | _ = raise "only one method supported"
 buildMain _ = raise "main function missing?"
 
 export
