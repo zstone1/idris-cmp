@@ -10,19 +10,37 @@ import Lightyear.Strings
 rtn : Parser ()
 rtn = token "return"
 
-parseIntLit : Parser ExprPrim
+parseIntLit : Parser TermPrim
 parseIntLit = [| MkIntLit integer |]
 
-parseStrLit : Parser ExprPrim
+parseStrLit : Parser TermPrim
 parseStrLit = [| MkStrLit $ quoted '"' |]
 
-parseLit : Parser ExprPrim
-parseLit =   parseIntLit
-         <|> parseStrLit
-         <?> "Failed to parse literal"
-          
-parseBody : Parser ExprPrim
-parseBody = rtn *> parseLit <* semi
+mutual
+  parseFuncApp : Parser TermPrim
+  parseTerm : Parser TermPrim
+
+  parseFuncApp = do name <- some letter <* spaces
+                    args <- between (token "(") (token ")") (parseTerm `sepBy` token ",") 
+                    pure $ ApplyFunc (pack name) (fromList args)
+
+  parseTerm =  parseIntLit
+           <|> parseStrLit
+           <?> "Failed to parse literal"
+
+parseRtn : Parser ExprPrim
+parseRtn = rtn *> [| Return parseTerm |]
+
+parseExecTerm : Parser ExprPrim
+parseExecTerm = [|ExecTerm parseTerm |] 
+         
+parseExpr : Parser ExprPrim
+parseExpr =  parseRtn
+         <|> parseExecTerm 
+         <?> "cannot determine expression"
+
+parseBody : Parser (List ExprPrim)
+parseBody = parseExpr `sepBy` semi
 
 parsePair : Parser (String, String)
 parsePair = do 
@@ -43,7 +61,7 @@ parseFunc = do
   let ty' = pack ty
   let name' = pack name
   let params' = fromList params
-  pure $ MkFuncPrim access' ty' name' params' [defn]
+  pure $ MkFuncPrim access' ty' name' params' defn
 
 parseProgram' : Parser (ProgramPrim)
 parseProgram' = do 
@@ -57,5 +75,4 @@ parseProgram : String -> Comp ProgramPrim
 parseProgram s = assert_total $ case parse parseProgram' s of
                                    Left e => raise e
                                    Right p => pure p
-
 

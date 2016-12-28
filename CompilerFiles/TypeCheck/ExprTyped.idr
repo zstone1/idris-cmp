@@ -8,29 +8,47 @@ data C0Type = C0Int
 
 data AccessMod = Public
 
-data ExprTyped : C0Type -> Type where
-  MkIntLit : Int -> ExprTyped C0Int
-  MkStrLit : String -> ExprTyped C0Str
+mutual 
+  data TermTyped : C0Type -> Type where
+    MkIntLit : Int -> TermTyped C0Int
+    MkStrLit : String -> TermTyped C0Str
+    ApplyFunc : FuncTyped rtn arTy -> MatchArgTy arTy arVal -> TermTyped rtn
 
-record FuncTyped where
-  constructor MkFuncTyped
-  access : AccessMod
-  name : String
-  params : Vect n (C0Type, String)
-  rtnTy : C0Type
-  body : List (t : C0Type ** ExprTyped t)
+  data MatchArgTy : (Vect n C0Type) -> (Vect n (t:C0Type ** TermTyped t)) -> Type where
+    Vacuous : MatchArgTy [] []
+    Next : (t:C0Type) -> (v:TermTyped t) -> MatchArgTy {n=k} ts vs ->  
+           MatchArgTy {n=S k} (t::ts) ((t**v) :: vs)
 
-arity : FuncTyped -> Nat
-arity f = length $ params f
+  record FuncTyped (rtn:C0Type) (args: Vect n C0Type) where
+    constructor MkFuncTyped
+    access : AccessMod
+    name : String
+    paramNames : Vect n String
+    body : List (t : C0Type ** ExprTyped t)
 
---MainName : String
---MainName = "main"
+  data ExprTyped : C0Type -> Type where
+    Return : TermTyped t -> ExprTyped t
 
-data IsMain : FuncTyped -> List FuncTyped -> Type where
-  EmptyMain : List.Elem  (MkFuncTyped Public "main" [] C0Int b ) fs -> 
-              IsMain (MkFuncTyped Public "main" [] C0Int b ) fs
+arity : FuncTyped {n=n} _ _ -> Nat
+arity {n} = const n
 
-mainFunc : IsMain f fs -> FuncTyped
+getArgs : MatchArgTy ts vs -> (n ** Vect n (t:C0Type ** TermTyped t))
+getArgs {vs} = const (_ ** vs)
+
+data SigFunc : Type where
+  SFunc : (t:C0Type) -> (args : Vect n C0Type) -> (FuncTyped t args) -> SigFunc
+
+rtnTy : SigFunc -> C0Type
+rtnTy (SFunc t _ _) = t
+
+argTy : SigFunc -> (n:Nat ** Vect n C0Type)
+argTy (SFunc _ s _) = ( _ ** s)
+
+data IsMain : SigFunc -> List SigFunc -> Type where
+  EmptyMain : Elem (SFunc r a (MkFuncTyped Public "main" [] b )) fs -> 
+              IsMain (SFunc r a (MkFuncTyped Public "main" [] b )) fs
+
+mainFunc : IsMain f fs -> SigFunc
 mainFunc {f} = const f
 
 mainElem : IsMain f fs -> Elem f fs
@@ -38,7 +56,7 @@ mainElem (EmptyMain el) = el
 
 
 data ProgramTyped : Type where
-  MkProgram : (fs : List FuncTyped) -> IsMain f fs -> ProgramTyped 
+  MkProgram : (fs : List SigFunc) -> IsMain f fs -> ProgramTyped 
 
 DecEq C0Type where
   decEq C0Int C0Int = Yes Refl
@@ -56,17 +74,25 @@ Show C0Type where
 Show AccessMod where
   show Public = "Public"
 
-Show (ExprTyped t) where
+Show (TermTyped t) where
   show (MkIntLit x) = "IntLit: " ++ show x
   show (MkStrLit x) = "StrLit: " ++ show x
+  --Mutually recursive type as dependent parameter of list. Idris is not that clever
+  show (ApplyFunc (MkFuncTyped _ n _ _) val) = assert_total
+    (show n ++ " " ++  show (getArgs val))
 
-Show FuncTyped where
+Show (ExprTyped t) where
+  show (Return s) = "return " ++ show s
+
+Show (FuncTyped r a)  where
   show x = "access : " ++ (show $ access x) ++    "\n" ++
-           "rtnTy : " ++ (show $ rtnTy x) ++ "\n" ++
+           "rtnTy : " ++ (show r)              ++ "\n" ++
            "name : " ++ (show $ name x) ++        "\n" ++
-           "params: " ++ (show $ params x) ++     "\n" ++
+           "params: " ++ (show a)          ++     "\n" ++
            "body: " ++ (show $ body x) 
+Show SigFunc where
+  show (SFunc _ _ f) = show f
 
 Show ProgramTyped where
-  show (MkProgram funcs _) = "funcs : " ++ (show $ funcs) 
-
+  show (MkProgram funcs _) = "funcs : " ++ (show funcs) 
+  
