@@ -12,22 +12,34 @@ writeStd o i = [
       Mov (Reg RDX) @i@,
       Syscall]
 
-exit : Int -> List Instr
-exit i =
+exit : List Instr
+exit =
   [Mov (Reg EAX) @60@,
    Xor (Reg RDI) (Reg RDI),
    Syscall]
 
-buildMain : IsMain f fs -> AsmProgram
-buildMain {f = MkFuncTyped Public _ [] C0Int [(C0Int ** (MkIntLit i))]} (EmptyMain _) = 
-  let reserve = MkReserve "rtn" DB (Num i) in
-  let instrs = (writeStd (Res reserve) 1) ++ (exit i) in
-     MkAsm (MkDirectives (Just "_start")) 
-           [reserve] 
-           [MkAsmFunc instrs "_start"]
-buildMain _ = assert_unreachable()
+buildTerm : TermTyped t -> Comp Reservation
+buildTerm (MkIntLit i) = pure $ MkReserve "rtn" DB (Num i)
+buildTerm (MkStrLit s) = pure $ MkReserve "rtn" DB (Chars s (Just 10))
+buildTerm _ = raise "wtf to do with this?"
+
+buildExpr : ExprTyped t -> Comp (List Instr, List Reservation)
+buildExpr (Return i) = do
+  reserve <- buildTerm i
+  pure ((writeStd (Res reserve) 1) ++ exit, [reserve])
+
+buildMain : IsMain f fs -> Comp AsmProgram
+buildMain {f = SFunc _ _ (MkFuncTyped Public "main" [] b)} (EmptyMain _) with (b)
+  | [] = raise "no methods"
+  | ((_** x)::[]) = do
+      (instrs, reservs) <- buildExpr x
+      pure$ MkAsm (MkDirectives (Just "_start"))
+            reservs
+            [MkAsmFunc instrs "_start"]
+  | (x::x'::xs) = raise "multiple args"
+buildMain _ = raise "main function missing?"
 
 export
-toAsm : ProgramTyped -> AsmProgram
+toAsm : ProgramTyped -> Comp AsmProgram
 toAsm (MkProgram funcs main) = buildMain main
 

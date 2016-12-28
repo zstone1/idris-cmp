@@ -11,7 +11,7 @@ compile : String -> Comp AsmProgram
 compile s = do
   parsed <- parseProgram s
   typed <- convertProgram parsed
-  let assembled = toAsm typed
+  assembled <- toAsm typed
   pure $ assembled
 
 

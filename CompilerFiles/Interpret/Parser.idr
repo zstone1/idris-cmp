@@ -22,7 +22,7 @@ mutual
 
   parseFuncApp = do name <- some letter <* spaces
                     args <- between (token "(") (token ")") (parseTerm `sepBy` token ",") 
-                    pure $ ApplyFunc (pack name) (fromList args)
+                    pure $ ApplyFunc (pack name) Nothing (fromList args)
 
   parseTerm =  parseIntLit
            <|> parseStrLit
@@ -40,7 +40,7 @@ parseExpr =  parseRtn
          <?> "cannot determine expression"
 
 parseBody : Parser (List ExprPrim)
-parseBody = parseExpr `sepBy` semi
+parseBody = many (parseExpr <* semi)
 
 parsePair : Parser (String, String)
 parsePair = do 
@@ -75,4 +75,22 @@ parseProgram : String -> Comp ProgramPrim
 parseProgram s = assert_total $ case parse parseProgram' s of
                                    Left e => raise e
                                    Right p => pure p
+
+test : String -> String
+test s = case parse parseProgram' s of
+              Left e => e
+              Right e => show e
+
+
+
+
+
+
+
+
+
+
+
+
+
 

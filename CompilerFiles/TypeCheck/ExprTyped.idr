@@ -1,39 +1,34 @@
 module ExprTyped
 import Data.Vect
 import Data.List
+import Data.HVect
 %access public export
 
 data C0Type = C0Int 
             | C0Str 
+            | Void
 
 data AccessMod = Public
 
-mutual 
-  data TermTyped : C0Type -> Type where
-    MkIntLit : Int -> TermTyped C0Int
-    MkStrLit : String -> TermTyped C0Str
-    ApplyFunc : FuncTyped rtn arTy -> MatchArgTy arTy arVal -> TermTyped rtn
 
-  data MatchArgTy : (Vect n C0Type) -> (Vect n (t:C0Type ** TermTyped t)) -> Type where
-    Vacuous : MatchArgTy [] []
-    Next : (t:C0Type) -> (v:TermTyped t) -> MatchArgTy {n=k} ts vs ->  
-           MatchArgTy {n=S k} (t::ts) ((t**v) :: vs)
 
-  record FuncTyped (rtn:C0Type) (args: Vect n C0Type) where
-    constructor MkFuncTyped
-    access : AccessMod
-    name : String
-    paramNames : Vect n String
-    body : List (t : C0Type ** ExprTyped t)
+data TermTyped : C0Type -> Type where
+  MkIntLit : Int -> TermTyped C0Int
+  MkStrLit : String -> TermTyped C0Str
+  ApplyFunc : (name: String) -> (rtn : C0Type)-> Vect n (t:C0Type ** TermTyped t) -> TermTyped rtn
 
-  data ExprTyped : C0Type -> Type where
-    Return : TermTyped t -> ExprTyped t
+data ExprTyped : C0Type -> Type where
+  Return : TermTyped t -> ExprTyped t
+
+record FuncTyped (rtn:C0Type) (args: Vect n C0Type) where
+  constructor MkFuncTyped
+  access : AccessMod
+  name : String
+  paramNames : Vect n String
+  body : List (t : C0Type ** ExprTyped t)
 
 arity : FuncTyped {n=n} _ _ -> Nat
 arity {n} = const n
-
-getArgs : MatchArgTy ts vs -> (n ** Vect n (t:C0Type ** TermTyped t))
-getArgs {vs} = const (_ ** vs)
 
 data SigFunc : Type where
   SFunc : (t:C0Type) -> (args : Vect n C0Type) -> (FuncTyped t args) -> SigFunc
@@ -45,8 +40,8 @@ argTy : SigFunc -> (n:Nat ** Vect n C0Type)
 argTy (SFunc _ s _) = ( _ ** s)
 
 data IsMain : SigFunc -> List SigFunc -> Type where
-  EmptyMain : Elem (SFunc r a (MkFuncTyped Public "main" [] b )) fs -> 
-              IsMain (SFunc r a (MkFuncTyped Public "main" [] b )) fs
+  EmptyMain : Elem (SFunc C0Int a (MkFuncTyped Public "main" [] b )) fs -> 
+              IsMain (SFunc C0Int a (MkFuncTyped Public "main" [] b )) fs
 
 mainFunc : IsMain f fs -> SigFunc
 mainFunc {f} = const f
@@ -63,6 +58,8 @@ DecEq C0Type where
   decEq C0Int _ = No (believe_me()) --Find a better way to build these trivial DecEq types
   decEq C0Str C0Str = Yes Refl
   decEq C0Str _ = No (believe_me())
+  decEq Void Void = Yes Refl
+  decEq Void _ = No (believe_me())
 
 DecEq AccessMod where
   decEq Public Public = Yes Refl
@@ -70,16 +67,19 @@ DecEq AccessMod where
 Show C0Type where
   show C0Int = "C0Int"
   show C0Str = "C0Str"
+  show Void = "void type"
 
 Show AccessMod where
   show Public = "Public"
 
+
 Show (TermTyped t) where
   show (MkIntLit x) = "IntLit: " ++ show x
   show (MkStrLit x) = "StrLit: " ++ show x
-  --Mutually recursive type as dependent parameter of list. Idris is not that clever
-  show (ApplyFunc (MkFuncTyped _ n _ _) val) = assert_total
-    (show n ++ " " ++  show (getArgs val))
+  show (ApplyFunc n r vals) =  assert_total $
+    n ++ "(" ++ foldl 
+          (\a,x => a ++ "," ++ show (snd x))
+          "" vals ++ ")"
 
 Show (ExprTyped t) where
   show (Return s) = "return " ++ show s
