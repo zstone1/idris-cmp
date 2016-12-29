@@ -1,0 +1,10 @@
+
+./TypeCheck/ExprTyped.idr:18:10:When checking type of ExprTyped.Return:
+No such variable StatTyped
+./TypeCheck/ExprTyped.idr:21:11:
+When checking right hand side of StatTyped with expected type
+        Type
+
+No such variable StatGen
+./TypeCheck/ExprTyped.idr:31:1:
+Overlapping implementation: Show Int already defined

@@ -2,11 +2,13 @@ module PairExt
 import Data.Vect
 %access public export
 
-syntax "[(" [x]"$*"[map] ")]" = pure (\e => (x ** e)) <*> map x
+syntax "[(" [x]"$*"[map]")]" = pure (\e => (x ** e)) <*> map x
+syntax "[(" [x]"**"[val]")]" = pure (\e => (x ** e)) <*> val
 
 syntax "[(" [l] "," [r] ")]" = (| 
      (pure (\e => (l,e)) <*> r),
-     (pure (\e => (e,r)) <*> l)|)
+     (pure (\e => (e,r)) <*> l),
+     [|MkPair l r |] |)
                               
 private
 t1Help : (x : Nat) -> Maybe (Z=x)

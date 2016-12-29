@@ -1,10 +1,8 @@
-module TypeChecker
+module TypeParser
 import Interpret.RootInterpret
-import TypeCheck.ExprTyped
-import Effect.Exception
 import Util.RootUtil
-import Data.List
-
+import TypeCheck.CorePrgm
+import TypeCheck.Typed
 
 convertAccess : String -> Comp AccessMod
 convertAccess s with (s)
@@ -22,7 +20,6 @@ convertMType : Maybe String -> Comp C0Type
 convertMType Nothing = pure Void
 convertMType (Just x) = convertType x
 
---convertExpr : ExprPrim -> Comp (t:C0Type ** ExprTyped t)
 convertTerm : TermPrim -> Comp (t:C0Type ** TermTyped t)
 convertTerm (MkIntLit i) = pure (_ ** MkIntLit i) 
 convertTerm (MkStrLit s) = pure (_ ** MkStrLit s)
@@ -32,40 +29,31 @@ convertTerm (ApplyFunc n rtnPrim argsPrim) = do
   rtn <- convertMType rtnPrim
   pure ( _ ** ApplyFunc n rtn args)
   
-convertExpr : ExprPrim -> Comp (t:C0Type ** ExprTyped t)
-convertExpr (Return t) = do (t ** trm) <- convertTerm t
-                            pure (t ** Return trm)
-convertExpr (ExecTerm t) = raise "only return is supported"
+convertStat : StatPrim -> Comp StatTyped 
+convertStat (Return t) = do (t ** trm) <- convertTerm t
+                            pure (Return t trm)
+convertStat (ExecTerm t) = raise "only return is supported"
 
-convertBody : List ExprPrim -> Comp (List (t:C0Type ** ExprTyped t))
-convertBody ePrims = getEff $ traverse (monadEffT . convertExpr) ePrims
+convertBody : List StatPrim -> Comp (List StatTyped)
+convertBody ePrims = getEff $ traverse (monadEffT . convertStat) ePrims
+
 
 convertParam : (String, String) -> Comp (C0Type, String)
 convertParam (a,b) = [(convertType a, b)]
 
-convertFunc : FuncPrim -> Comp SigFunc
+convertFunc : FuncPrim -> Comp FuncTyped
 convertFunc x = do
   access <- convertAccess $ access x
   let name = name x
   body <- convertBody $ body x
   expectedt <- convertType $ rtnTy x 
   params <-getEff $ traverse (monadEffT . convertParam)  $ params x
-  let func = MkFuncTyped access name (map snd params) body
-  pure (SFunc expectedt (map fst params) func )
+  let func = MkFuncGen access name (map snd params) body
+  pure (MkFunc {rtnTy=expectedt} {args=(map fst params)} func )
 
-
-getMain : (l: List SigFunc) -> Comp (t ** IsMain t l)
-getMain [] = raise "Main method is required"
-getMain ((SFunc C0Int _ (MkFuncTyped Public "main" [] b))::fs) = pure $  (_** EmptyMain Here)
-getMain (x ::xs) = do (_**(EmptyMain elem)) <- getMain xs
-                      pure $ (_** EmptyMain (There elem))
                       
 export
-convertProgram : ProgramPrim -> Comp ProgramTyped
-convertProgram x = do
+convertProgramTyped : ProgramPrim -> Comp ProgramTyped
+convertProgramTyped x = do
   allfuncs <- getEff $ traverse (monadEffT . convertFunc) $ funcs x 
-  (_ ** main) <- getMain allfuncs
-  pure $ MkProgram allfuncs main
-
-
-
+  pure $ MkProgram allfuncs [] Nothing

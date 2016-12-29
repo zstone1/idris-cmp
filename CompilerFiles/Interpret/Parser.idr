@@ -6,7 +6,6 @@ import Lightyear.Char
 import Lightyear.Strings
 %access private
 %default partial
-
 rtn : Parser ()
 rtn = token "return"
 
@@ -28,19 +27,19 @@ mutual
            <|> parseStrLit
            <?> "Failed to parse literal"
 
-parseRtn : Parser ExprPrim
+parseRtn : Parser StatPrim
 parseRtn = rtn *> [| Return parseTerm |]
 
-parseExecTerm : Parser ExprPrim
+parseExecTerm : Parser StatPrim
 parseExecTerm = [|ExecTerm parseTerm |] 
          
-parseExpr : Parser ExprPrim
-parseExpr =  parseRtn
+parseStat : Parser StatPrim
+parseStat =  parseRtn
          <|> parseExecTerm 
          <?> "cannot determine expression"
 
-parseBody : Parser (List ExprPrim)
-parseBody = many (parseExpr <* semi)
+parseBody : Parser (List StatPrim)
+parseBody = many (parseStat <* semi)
 
 parsePair : Parser (String, String)
 parsePair = do 
@@ -67,7 +66,7 @@ parseProgram' : Parser (ProgramPrim)
 parseProgram' = do 
   funcs <- (parseFunc `sepBy` endOfLine)
   eof
-  pure $ MkProgramPrim funcs
+  pure $ MkProgram funcs [] Nothing
 
 export
 total --assert total because strings have finite length.
@@ -80,7 +79,6 @@ test : String -> String
 test s = case parse parseProgram' s of
               Left e => e
               Right e => show e
-
 
 
 

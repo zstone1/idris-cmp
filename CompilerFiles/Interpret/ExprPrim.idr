@@ -1,4 +1,5 @@
 module ExprPrim
+import Util.RootUtil
 import Data.Fin
 import Data.Vect
 %access public export
@@ -9,10 +10,10 @@ data TermPrim : Type where
   ApplyFunc : (fname: String) -> (rtn : Maybe String) -> Vect n TermPrim -> TermPrim
 
 |||An untyped representation of the contents of a function
-data ExprPrim : Type where
-  Return : TermPrim -> ExprPrim
+data StatPrim : Type where
+  Return : TermPrim -> StatPrim
   |||For applying funcs with no return. When we type the thing we'll figure out if it's valid
-  ExecTerm : TermPrim ->  ExprPrim
+  ExecTerm : TermPrim ->  StatPrim
   --Asign
   --Condition
 
@@ -23,20 +24,17 @@ record FuncPrim where
   rtnTy : String
   name : String
   params : Vect n (String, String)
-  body : List ExprPrim
+  body : List StatPrim
 
-
-record ProgramPrim where
-  constructor MkProgramPrim
-  funcs : List FuncPrim
-
-
+ProgramPrim : Type
+ProgramPrim = Program FuncPrim Void NoFacts 
+ 
 Show TermPrim where
   show (MkIntLit x) = "intLit: " ++ show x
   show (MkStrLit x) = "strLit: " ++ show x
   show (ApplyFunc n _ args) = assert_total (n ++ show args)
 
-Show ExprPrim where
+Show StatPrim where
   show (Return t) = "return "++ show t
   show (ExecTerm t) = show t
 
@@ -47,11 +45,6 @@ Show FuncPrim where
            "params: " ++ (show $ params x) ++  "\n" ++
            "body: " ++ (show $ body x) 
  
-Show ProgramPrim where
-  show x = "funcs : " ++ (show $ funcs x)
-
-
-
 
 
 
