@@ -4,10 +4,13 @@ import TypeCheck.Typed
 import Util.RootUtil
 %access public export
 
-
 data ConstTyped : C0Type -> Type where
   StringConst : (name:String) -> (val :String) -> ConstTyped C0Str
   NumConst : (name : String) -> (val : Int) -> ConstTyped C0Int
+
+constName : ConstTyped t -> String
+constName (StringConst n _)= n
+constName (NumConst n _) =  n
 
 data TermFactorConst : C0Type -> Type where
   FromConst : ConstTyped t -> TermFactorConst t
@@ -46,28 +49,28 @@ factorTerm (MkStrLit s) = do let const = StringConst !nextName s
                              pure (FromConst const)
 factorTerm (ApplyFunc n r x) = do 
   let map = (\(_**e)=> assert_total [(_**factorTerm e)])
-  args <-  getEff $ traverse (monadEffT . map) x 
+  args <- traverseM map x 
   pure (ApplyFunc n r args) 
 
 
 factorStat : StatTyped -> FactorConstEff StatFactorConst
-factorStat (Return t val) =pure$ Return _ !(factorTerm val)
+factorStat (Return t val) = pure$ Return _ !(factorTerm val)
 
 
 factorFunc : FuncTyped -> FactorConstEff FuncFactorConst
 factorFunc (MkFunc {rtnTy} {args} (MkFuncGen a n ns b)) = do
-  stats <- getEff $ traverse (monadEffT . factorStat) b 
+  stats <- traverseM factorStat b 
   pure (MkFunc {rtnTy} {args} (MkFuncGen a n ns stats ))
 
 
 factorFuncs : ProgramTyped -> FactorConstEff (List FuncFactorConst, Consts)
-factorFuncs (MkProgram fs cs _) = [(getEff (traverse (monadEffT . factorFunc) fs), get)]
+factorFuncs (MkProgram fs cs _) = [(traverseM factorFunc fs, get)]
 
 export 
 factorConstsPrgm : ProgramTyped -> Comp{ty=ty} ProgramFactorConst
 factorConstsPrgm p {ty} = do
   (fs, cs) <- new (STATE Consts) !(seed p) (factorFuncs p)
-  pure $ MkProgram fs cs Nothing
+  pure $ MkProgram fs cs Nothing --It would be nice to include a proof that every const is accounted for
   
 
 

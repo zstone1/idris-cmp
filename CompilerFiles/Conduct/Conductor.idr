@@ -10,13 +10,14 @@ import Control.IOExcept
 compile : String -> Comp AsmProgram
 compile s = do
   parsed <- parseProgram s
-  typed <- convertProgram parsed
-  assembled <- toAsm typed
-  pure $ assembled
+  typed <- convertProgramTyped parsed
+  constFactored <- factorConstsPrgm typed
+  toAsm constFactored
+  
 
 
 export
-compileToFile' : String -> String -> Comp {l=[EXCEPTION String, STDIO, FILE ()]} ()
+compileToFile' : String -> String -> Comp {l=[STDIO, FILE ()] ++ CompEffs} ()
 compileToFile' prgmFile name = do 
   (Result prgm) <- readFile prgmFile | FError e => raise (show e)
   asm <- compile prgm

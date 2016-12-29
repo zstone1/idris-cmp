@@ -10,6 +10,8 @@ implicit
 getEff : MonadEffT xs m a  -> EffM m a xs (\v => xs)
 getEff (MkMonadEffT x) = x
 
+traverseM : Traversable t => (a -> EffM m b es (\v => es)) -> t a -> EffM m (t b) es (\v => es)
+traverseM f xs = getEff (traverse (monadEffT . f) xs)
 
 CompErr : EFFECT 
 CompErr = EXCEPTION String
