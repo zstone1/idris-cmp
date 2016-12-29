@@ -39,6 +39,7 @@ buildExpr (Return  _ (FromConst c)) = do
   let (reserve, len) = buildReserve (_ ** c)
   pure ((writeStd (Res reserve) len) ++ exit)
 buildExpr (Return _ (ApplyFunc _ _ _)) = raise "asm doesn't support funcs yet"
+buildExpr (Execute _ _ ) = raise "asm still doesn't support functions"
 
 buildMain : QFunc StatFactorConst -> Comp AsmFunc
 buildMain (MkFunc (MkFuncGen Public "main" [] b)) = do

@@ -25,8 +25,6 @@ data QFunc : (statTy : Type) -> Type where
           (FuncGen statTy rtnTy args) -> 
           QFunc statTy
 
-quantify : FuncGen statTy t args -> QFunc statTy
-
 rtnTy : QFunc _ -> C0Type
 rtnTy (MkFunc {rtnTy} _) = rtnTy
 

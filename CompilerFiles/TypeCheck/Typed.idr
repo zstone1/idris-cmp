@@ -8,6 +8,7 @@ import Util.RootUtil
 
 data StatGen : (termT : C0Type -> Type) -> Type where
   Return : (t:C0Type) -> termT t -> StatGen termT
+  Execute : (name : String) -> (Vect n (t:C0Type ** termT t)) -> StatGen termT
 
 data TermTyped : C0Type -> Type where
   MkIntLit : Int -> TermTyped C0Int
@@ -33,3 +34,4 @@ Show (TermTyped t) where
 
 Show StatTyped where
   show (Return _ s) = "return " ++ show s
+  show (Execute n vs) = n ++ "(" ++ show vs ++ ")"

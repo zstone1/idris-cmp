@@ -25,7 +25,7 @@ convertTerm (MkIntLit i) = pure (_ ** MkIntLit i)
 convertTerm (MkStrLit s) = pure (_ ** MkStrLit s)
 convertTerm (ApplyFunc n rtnPrim argsPrim) = do 
   --assert total due to args nested in list
-  args <- assert_total $ getEff $ traverse (monadEffT . convertTerm) argsPrim 
+  args <- assert_total $  traverseM  convertTerm argsPrim 
   rtn <- convertMType rtnPrim
   pure ( _ ** ApplyFunc n rtn args)
   

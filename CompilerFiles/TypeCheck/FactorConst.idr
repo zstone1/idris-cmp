@@ -52,9 +52,13 @@ factorTerm (ApplyFunc n r x) = do
   args <- traverseM map x 
   pure (ApplyFunc n r args) 
 
-
 factorStat : StatTyped -> FactorConstEff StatFactorConst
 factorStat (Return t val) = pure$ Return _ !(factorTerm val)
+factorStat (Execute n ts) = do 
+  let map = (\(_**e)=> assert_total [(_**factorTerm e)])
+  terms <- traverseM map ts
+  pure $ Execute n terms
+
 
 
 factorFunc : FuncTyped -> FactorConstEff FuncFactorConst
