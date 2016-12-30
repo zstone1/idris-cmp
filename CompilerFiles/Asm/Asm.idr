@@ -18,8 +18,10 @@ data Prefix = Dec
 --            | Oct
 --            | Bin
 
-data MemSize = DB
+data MemSize = B
+             | W
              | DW
+             | QW
 
 ---------- reserved values
 data ReserveVal = Chars String (Maybe Int) | Num Int
@@ -33,7 +35,7 @@ record Reservation where
 -------- Directives
 record Directives where
   constructor MkDirectives
-  global : Maybe String
+  global : String
 
 --------- Instruction
 record ImmVal where
@@ -45,6 +47,7 @@ data Opr : Type where
   Reg : RegId -> Opr
   Imm : ImmVal -> Opr 
   Res : (r:Reservation) -> Opr
+  Mem : Maybe MemSize -> Opr -> Opr
 
 syntax "@"[v]"@" = Imm $ MkImm v Dec
 
@@ -52,8 +55,9 @@ data Instr :Type where
   Mov : Opr -> Opr-> Instr
   Syscall : Instr 
   Xor : Opr -> Opr -> Instr 
-  Jeq : String -> Instr
+  Je : String -> Instr
   Jnz : String -> Instr
+  Jne : String -> Instr
   Jmp : String -> Instr
   Cmp : Opr -> Opr -> Instr
   Label : String -> Instr
@@ -68,16 +72,6 @@ record AsmFunc where
 data AsmProgram : Type where
   MkAsm : Directives -> List Reservation -> List AsmFunc -> AsmProgram
 
-InitPrgm : AsmProgram
-InitPrgm = MkAsm (MkDirectives Nothing) [] []
-  
-
-
-data AsmState : AsmProgram -> Type where
-  Init : AsmState InitPrgm
-  AddReserve : (r : Reservation) -> AsmState (MkAsm d rs fs) -> AsmState (MkAsm d (r::rs) fs)
-  AddFunc : (f : AsmFunc) -> AsmState (MkAsm d rs fs) -> AsmState (MkAsm d rs (f ::fs))
-   
 
 Show RegId where
   show RAX = "rax"
@@ -90,14 +84,22 @@ Show RegId where
   show RDI = "rdi"
   show EAX = "eax" 
 
-Show MemSize where
-  show DB = "db"
-  show DW = "dw"
+[dataSec] Show MemSize where
+  show B = "db"
+  show W = "dw"
+  show DW = "dd"
+  show QW = "dq"
+
+[memRead] Show MemSize where
+  show B = "byte"
+  show W = "word"
+  show DW = "dword"
+  show QW = "qword"
 
 Show Reservation where
-  show (MkReserve n s (Num i)) = n ++ ":  " ++ show s ++ " " ++ show i
-  show (MkReserve n s (Chars v Nothing)) = n ++ ":  " ++show s++ "  \"" ++ v ++ "\""
-  show (MkReserve n s (Chars v (Just i))) = n ++ ":  " ++ show s++ "  \"" ++ v ++ "\"," ++ show i
+  show (MkReserve n s (Num i)) = n ++ ":  " ++ show @{dataSec} s ++ " " ++ show i
+  show (MkReserve n s (Chars v Nothing)) = n ++ ":  " ++show @{dataSec} s++ "  \"" ++ v ++ "\""
+  show (MkReserve n s (Chars v (Just i))) = n ++ ":  " ++show @{dataSec} s++ "  \"" ++ v ++ "\"," ++ show i
 
 Show ImmVal where
   show (MkImm v p) = show v --TODO: use hex for everything.
@@ -106,11 +108,12 @@ Show (Opr) where
   show (Reg r) = show r
   show (Imm i) = show i
   show (Res m) = name m
+  show (Mem Nothing opr) = "["++show opr++"]"
+  show (Mem (Just s) opr) = show @{memRead} s ++" ["++show opr++"]"
 
 
 Show Directives where
-  show (MkDirectives Nothing) = ""
-  show (MkDirectives (Just x)) = "global " ++ x
+  show (MkDirectives x) = "global " ++ x
 
 pad10 : String -> String
 pad10 = padSpace 10
@@ -120,7 +123,8 @@ pad5 = padSpace 5
 
 Show (Instr) where
   show (Jnz l) = pad5 "" ++ pad10 "jnz" ++ l
-  show (Jeq l) = pad5 "" ++ pad10 "jeq" ++ l
+  show (Je l) = pad5 "" ++ pad10 "je" ++ l
+  show (Jne l) = pad5 "" ++ pad10 "jne" ++ l
   show (Jmp l) = pad5 "" ++ pad10 "jmp" ++ l
   show (Cmp o1 o2) = pad5 "" ++ pad10 "cmp" ++ (pad5 (show o1)) ++ "," ++ (show o2)
   show (Mov o1 o2) = pad5 "" ++ pad10 "mov" ++ (pad5 (show o1)) ++ "," ++ (show o2)

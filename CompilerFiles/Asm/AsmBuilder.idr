@@ -31,8 +31,8 @@ buildMain _ = raise "main function missing?"
 -}
 
 buildReserve : (t:C0Type ** ConstTyped t) -> (Reservation, Int)
-buildReserve (_**(StringConst n s)) = (MkReserve n DB (Chars s (Just 10)), cast (length s))
-buildReserve (_**(NumConst n i)) = (MkReserve n DB (Num i), 1)
+buildReserve (_**(StringConst n s)) = (MkReserve n QW (Chars s (Just 10)), cast (length s) +1)
+buildReserve (_**(NumConst n i)) = (MkReserve n QW (Num i), 1)
 
 
 
@@ -48,8 +48,8 @@ buildExpr (Condition (FromConst {t=C0Int} c) bo) = do
   ifTrue <- assert_total (traverseM buildExpr bo)
   doneLabel <- nextName
   pure([
-    Cmp (Res reserve) @0@,
-    Jnz doneLabel ]++
+    Cmp (Mem (Just QW) (Res reserve)) @0@,
+    Jne doneLabel ]++
     concat ifTrue ++[
     Label doneLabel])
 
@@ -67,7 +67,7 @@ buildMain _ = raise "Not a main function"
 export
 toAsm : ProgramLink -> Comp AsmProgram
 toAsm (MkProgram (x::[]) cs _) = pure $ MkAsm
-      (MkDirectives (Just "_start"))
+      (MkDirectives "_start")
       (map (fst . buildReserve) cs)
       [!( buildMain x)]
 toAsm _ = raise "Only one function supported"

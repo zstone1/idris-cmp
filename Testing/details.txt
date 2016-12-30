@@ -1,3 +1,6 @@
 ifconst\n
-1d0
-< true! outside
+Binary files expected/ifconst.expt and results/ifconst.txt differ
+print-once\n
+Binary files expected/print-once.expt and results/print-once.txt differ
+print-twice\n
+Binary files expected/print-twice.expt and results/print-twice.txt differ
