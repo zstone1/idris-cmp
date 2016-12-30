@@ -8,6 +8,7 @@ cd ../Testing
 temp="/home/zach/tmp/comptest"
 mkdir -p "$temp"
 mkdir -p "asm"
+rm -r "results"
 mkdir -p "results"
 mkdir -p test-prgms
 failures=()

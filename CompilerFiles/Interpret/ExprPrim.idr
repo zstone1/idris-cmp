@@ -7,7 +7,7 @@ import Data.Vect
 data TermPrim : Type where
   MkIntLit : Int -> TermPrim
   MkStrLit : String -> TermPrim
-  ApplyFunc : (fname: String) -> (rtn : Maybe String) -> Vect n TermPrim -> TermPrim
+  ApplyFunc : (fname: String) -> Vect n TermPrim -> TermPrim
 
 |||An untyped representation of the contents of a function
 data StatPrim : Type where
@@ -32,7 +32,7 @@ ProgramPrim = Program FuncPrim Void NoFacts
 Show TermPrim where
   show (MkIntLit x) = "intLit: " ++ show x
   show (MkStrLit x) = "strLit: " ++ show x
-  show (ApplyFunc n _ args) = assert_total (n ++ show args)
+  show (ApplyFunc n args) = assert_total (n ++ show args)
 
 Show StatPrim where
   show (Return t) = "return "++ show t

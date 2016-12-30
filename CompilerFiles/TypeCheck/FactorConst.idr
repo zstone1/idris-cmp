@@ -1,6 +1,6 @@
 module FactorConst
 import TypeCheck.CorePrgm
-import TypeCheck.Typed
+import TypeCheck.ParseTypes
 import Util.RootUtil
 %access public export
 
@@ -12,11 +12,11 @@ constName : ConstTyped t -> String
 constName (StringConst n _)= n
 constName (NumConst n _) =  n
 
-data TermFactorConst : C0Type -> Type where
-  FromConst : ConstTyped t -> TermFactorConst t
-  ApplyFunc : (name: String) -> (rtn : C0Type)-> 
-              Vect n (t:C0Type ** TermFactorConst t) -> 
-              TermFactorConst rtn
+data TermFactorConst : Maybe C0Type -> Type where
+  FromConst : ConstTyped t -> TermFactorConst (Just t)
+  ApplyFunc : (name: String) -> 
+              Vect n (t: Maybe C0Type ** TermFactorConst t) -> 
+              TermFactorConst Nothing
 
 StatFactorConst : Type
 StatFactorConst = StatGen TermFactorConst
@@ -47,10 +47,10 @@ factorTerm (MkIntLit i) = do let const = NumConst !nextName i
 factorTerm (MkStrLit s) = do let const = StringConst !nextName s
                              update ((_**const) ::)
                              pure (FromConst const)
-factorTerm (ApplyFunc n r x) = do 
+factorTerm (ApplyFunc n x) = do 
   let map = (\(_**e)=> assert_total [(_**factorTerm e)])
   args <- traverseM map x 
-  pure (ApplyFunc n r args) 
+  pure (ApplyFunc n args) 
 
 factorStat : StatTyped -> FactorConstEff StatFactorConst
 factorStat (Return t val) = pure$ Return _ !(factorTerm val)

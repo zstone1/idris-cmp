@@ -4,9 +4,13 @@ import Util.RootUtil
 
 data C0Type = C0Int 
             | C0Str 
-            | Void
+--            | Void
 
 data AccessMod = Public
+
+data StatGen : (termT : ty -> Type) -> Type where
+  Return : (t: ty) -> termT t -> StatGen termT
+  Execute : (name : String) -> (Vect n (t: (ty) ** termT t)) -> StatGen termT
 
 record FuncGen (statT : Type) (rtn:C0Type) (args: Vect n C0Type) where
   constructor MkFuncGen
@@ -40,8 +44,8 @@ DecEq C0Type where
   decEq C0Int _ = No (believe_me()) --Find a better way to build these trivial DecEq types
   decEq C0Str C0Str = Yes Refl
   decEq C0Str _ = No (believe_me())
-  decEq Void Void = Yes Refl
-  decEq Void _ = No (believe_me())
+--  decEq Void Void = Yes Refl
+--  decEq Void _ = No (believe_me())
 
 DecEq AccessMod where
   decEq Public Public = Yes Refl
@@ -49,7 +53,7 @@ DecEq AccessMod where
 Show C0Type where
   show C0Int = "C0Int"
   show C0Str = "C0Str"
-  show Void = "void type"
+--  show Void = "void type"
 
 Show AccessMod where
   show Public = "Public"

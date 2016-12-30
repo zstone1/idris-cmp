@@ -1,9 +1,36 @@
-module TypeParser
+module ParseTypes
 import Interpret.RootInterpret
 import Util.RootUtil
 import TypeCheck.CorePrgm
-import TypeCheck.Typed
+%access public export
 
+data TermTyped : Maybe C0Type -> Type where
+  MkIntLit : Int -> TermTyped (Just C0Int)
+  MkStrLit : String -> TermTyped (Just C0Str)
+  ApplyFunc : (name: String) -> Vect n (t:Maybe C0Type ** TermTyped t) -> TermTyped Nothing
+
+StatTyped : Type
+StatTyped = StatGen TermTyped
+
+FuncTyped : Type
+FuncTyped = QFunc StatTyped
+
+ProgramTyped : Type
+ProgramTyped = Program FuncTyped Void NoFacts
+
+Show (TermTyped t) where
+  show (MkIntLit x) = "IntLit: " ++ show x
+  show (MkStrLit x) = "StrLit: " ++ show x
+  show (ApplyFunc n vals) =  assert_total $
+    n ++ "(" ++ foldl 
+          (\a,x => a ++ "," ++ show (snd x))
+          "" vals ++ ")"
+
+Show StatTyped where
+  show (Return _ s) = "return " ++ show s
+  show (Execute n vs) = n ++ "(" ++ show vs ++ ")"
+
+%access private
 convertAccess : String -> Comp AccessMod
 convertAccess s with (s)
   | "public" = pure Public
@@ -16,18 +43,13 @@ convertType s with (s)
   | "string" = pure C0Str
   | _ = raise ( s ++ " is not a valid type")
 
-convertMType : Maybe String -> Comp C0Type
-convertMType Nothing = pure Void
-convertMType (Just x) = convertType x
-
-convertTerm : TermPrim -> Comp (t:C0Type ** TermTyped t)
+convertTerm : TermPrim -> Comp (t:Maybe C0Type ** TermTyped t)
 convertTerm (MkIntLit i) = pure (_ ** MkIntLit i) 
 convertTerm (MkStrLit s) = pure (_ ** MkStrLit s)
-convertTerm (ApplyFunc n rtnPrim argsPrim) = do 
+convertTerm (ApplyFunc n argsPrim) = do 
   --assert total due to args nested in list
   args <- assert_total $  traverseM  convertTerm argsPrim 
-  rtn <- convertMType rtnPrim
-  pure ( _ ** ApplyFunc n rtn args)
+  pure ( _ ** ApplyFunc n args)
   
 convertStat : StatPrim -> Comp StatTyped 
 convertStat (Return t) = do (t ** trm) <- convertTerm t

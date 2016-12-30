@@ -21,7 +21,7 @@ mutual
 
   parseFuncApp = do name <- some letter <* spaces
                     args <- between (token "(") (token ")") (parseTerm `sepBy` token ",") 
-                    pure $ ApplyFunc (pack name) Nothing (fromList args)
+                    pure $ ApplyFunc (pack name) (fromList args)
 
   parseTerm =  parseIntLit
            <|> parseStrLit
