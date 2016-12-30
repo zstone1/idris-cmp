@@ -54,7 +54,11 @@ convertTerm (ApplyFunc n argsPrim) = do
 convertStat : StatPrim -> Comp StatTyped 
 convertStat (Return t) = do (t ** trm) <- convertTerm t
                             pure (Return t trm)
-convertStat (ExecTerm t) = raise "only return is supported"
+convertStat (ExecTerm (ApplyFunc n args)) = pure $ Execute n !(traverseM convertTerm args)
+convertStat (ExecTerm (MkIntLit i)) = raise ("Cannot execute int  "++ show i)
+convertStat (ExecTerm (MkStrLit s)) = raise ("Cannot execute string " ++ s)
+
+
 
 convertBody : List StatPrim -> Comp (List StatTyped)
 convertBody ePrims = getEff $ traverse (monadEffT . convertStat) ePrims

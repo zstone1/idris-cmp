@@ -7,12 +7,14 @@ import Effect.File
 import Effect.StdIO
 import Control.IOExcept
 
-compile : String -> Comp AsmProgram
+compile : String -> Comp {l=STDIO :: CompEffs} AsmProgram
 compile s = do
   parsed <- parseProgram s
   typed <- convertProgramTyped parsed
+  --putStrLn (show typed)
   constFactored <- factorConstsPrgm typed
-  toAsm constFactored
+  linked <- linkPrgm constFactored
+  toAsm linked
   
 
 

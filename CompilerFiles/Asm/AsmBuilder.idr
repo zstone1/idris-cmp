@@ -12,13 +12,13 @@ writeStd o i = [
       Mov (Reg RDX) @i@,
       Syscall]
 
-exit : List Instr
-exit =
+exit : Opr -> List Instr
+exit o =
   [Mov (Reg EAX) @60@,
-   Xor (Reg RDI) (Reg RDI),
+   Mov (Reg RDI) o,
    Syscall]
-{-
 
+{-
 buildMain 
 buildMain {f = SFunc _ _ (MkFuncTyped Public "main" [] b)} (EmptyMain _) with (b)
   | ((_** x)::[]) = do
@@ -34,21 +34,25 @@ buildReserve : (t:C0Type ** ConstTyped t) -> (Reservation, Int)
 buildReserve (_**(StringConst n s)) = (MkReserve n DB (Chars s (Just 10)), cast (length s))
 buildReserve (_**(NumConst n i)) = (MkReserve n DB (Num i), 1)
 
-buildExpr : StatFactorConst -> Comp (List Instr)
-buildExpr (Return  _ (FromConst c)) = do
-  let (reserve, len) = buildReserve (_ ** c)
-  pure ((writeStd (Res reserve) len) ++ exit)
-buildExpr (Return _ (ApplyFunc _ _)) = raise "asm doesn't support funcs yet"
+buildExpr : StatLink-> Comp (List Instr)
+buildExpr (Return _ (FromConst c)) =
+  let (reserve, _) = buildReserve (_ ** c) in 
+      pure (exit (Res reserve))
+buildExpr (Execute "printf" [ (C0Str ** FromConst c) ]) = do
+  let (reserve, len) = buildReserve (_ **c)
+  pure (writeStd (Res reserve) len) 
 buildExpr (Execute _ _ ) = raise "asm still doesn't support functions"
+buildExpr (Return _ _ ) = raise "return doesn't support functions"
 
-buildMain : QFunc StatFactorConst -> Comp AsmFunc
+
+buildMain : QFunc StatLink -> Comp AsmFunc
 buildMain (MkFunc (MkFuncGen Public "main" [] b)) = do
   exprs <- traverseM buildExpr b
   pure $ MkAsmFunc (concat exprs) "_start"
 buildMain _ = raise "Not a main function"
 
 export
-toAsm : ProgramFactorConst -> Comp AsmProgram
+toAsm : ProgramLink -> Comp AsmProgram
 toAsm (MkProgram (x::[]) cs _) = pure $ MkAsm
       (MkDirectives (Just "_start"))
       (map (fst . buildReserve) cs)

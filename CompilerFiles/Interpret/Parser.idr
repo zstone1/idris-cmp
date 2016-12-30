@@ -31,7 +31,7 @@ parseRtn : Parser StatPrim
 parseRtn = rtn *> [| Return parseTerm |]
 
 parseExecTerm : Parser StatPrim
-parseExecTerm = [|ExecTerm parseTerm |] 
+parseExecTerm = [|ExecTerm parseFuncApp |] 
          
 parseStat : Parser StatPrim
 parseStat =  parseRtn
