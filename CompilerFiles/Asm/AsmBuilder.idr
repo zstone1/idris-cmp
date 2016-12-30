@@ -31,7 +31,7 @@ buildMain _ = raise "main function missing?"
 -}
 
 buildReserve : (t:C0Type ** ConstTyped t) -> (Reservation, Int)
-buildReserve (_**(StringConst n s)) = (MkReserve n QW (Chars s (Just 10)), cast (length s) +1)
+buildReserve (_**(StringConst n s)) = (MkReserve n B (Chars s (Just 10)), cast (length s) +1)
 buildReserve (_**(NumConst n i)) = (MkReserve n QW (Num i), 1)
 
 
