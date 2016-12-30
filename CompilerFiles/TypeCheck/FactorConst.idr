@@ -58,8 +58,10 @@ factorStat (Execute n ts) = do
   let map = (\(_**e)=> assert_total [(_**factorTerm e)])
   terms <- traverseM map ts
   pure $ Execute n terms
-
-
+factorStat (Condition gu bo) = do
+  gu' <- factorTerm gu
+  bo' <- assert_total (traverseM factorStat bo)
+  pure$ Condition gu' bo'
 
 factorFunc : FuncTyped -> FactorConstEff FuncFactorConst
 factorFunc (MkFunc {rtnTy} {args} (MkFuncGen a n ns b)) = do

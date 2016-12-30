@@ -25,21 +25,33 @@ mutual
 
   parseTerm =  parseIntLit
            <|> parseStrLit
+           <|> parseFuncApp
            <?> "Failed to parse literal"
 
-parseRtn : Parser StatPrim
-parseRtn = rtn *> [| Return parseTerm |]
+mutual 
+  parseStat : Parser StatPrim
+  parseRtn : Parser StatPrim
+  parseExecTerm : Parser StatPrim
+  parseCondition : Parser StatPrim
+  parseBody : Parser (List StatPrim)
 
-parseExecTerm : Parser StatPrim
-parseExecTerm = [|ExecTerm parseFuncApp |] 
+  parseRtn = rtn *> [| Return parseTerm |]
+
+  parseExecTerm = [|ExecTerm parseFuncApp |] 
          
-parseStat : Parser StatPrim
-parseStat =  parseRtn
-         <|> parseExecTerm 
-         <?> "cannot determine expression"
+  parseCondition = do token "if" 
+                      token "(" 
+                      gu <- parseTerm
+                      token ")"
+                      bo <- parseBody
+                      pure (Condition gu bo)
 
-parseBody : Parser (List StatPrim)
-parseBody = many (parseStat <* semi)
+  parseStat =  (parseRtn <* semi)
+           <|> parseCondition
+           <|> (parseExecTerm <* semi)
+           <?> "cannot determine expression"
+
+  parseBody = between (token "{") (token "}") (many parseStat)
 
 parsePair : Parser (String, String)
 parsePair = do 
@@ -55,7 +67,7 @@ parseFunc = do
   ty <- some letter <* token " "
   name <- some letter <* spaces
   params <- between (token "(") (token ")") (parsePair `sepBy` (token ","))
-  defn <- between (token "{") (token "}") parseBody
+  defn <- parseBody
   let access' = pack access
   let ty' = pack ty
   let name' = pack name

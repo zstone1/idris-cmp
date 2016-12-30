@@ -34,6 +34,8 @@ buildReserve : (t:C0Type ** ConstTyped t) -> (Reservation, Int)
 buildReserve (_**(StringConst n s)) = (MkReserve n DB (Chars s (Just 10)), cast (length s))
 buildReserve (_**(NumConst n i)) = (MkReserve n DB (Num i), 1)
 
+
+
 buildExpr : StatLink-> Comp (List Instr)
 buildExpr (Return _ (FromConst c)) =
   let (reserve, _) = buildReserve (_ ** c) in 
@@ -41,8 +43,19 @@ buildExpr (Return _ (FromConst c)) =
 buildExpr (Execute "printf" [ (C0Str ** FromConst c) ]) = do
   let (reserve, len) = buildReserve (_ **c)
   pure (writeStd (Res reserve) len) 
+buildExpr (Condition (FromConst {t=C0Int} c) bo) = do
+  let (reserve, _) = buildReserve (C0Int ** c)
+  ifTrue <- assert_total (traverseM buildExpr bo)
+  doneLabel <- nextName
+  pure([
+    Cmp (Res reserve) @0@,
+    Jnz doneLabel ]++
+    concat ifTrue ++[
+    Label doneLabel])
+
 buildExpr (Execute _ _ ) = raise "asm still doesn't support functions"
 buildExpr (Return _ _ ) = raise "return doesn't support functions"
+buildExpr (Condition  _ _) = raise "unsupported if statement"
 
 
 buildMain : QFunc StatLink -> Comp AsmFunc

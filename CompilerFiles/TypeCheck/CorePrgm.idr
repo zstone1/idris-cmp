@@ -11,6 +11,7 @@ data AccessMod = Public
 data StatGen : (termT : ty -> Type) -> Type where
   Return : (t: ty) -> termT t -> StatGen termT
   Execute : (name : String) -> (Vect n (t: (ty) ** termT t)) -> StatGen termT
+  Condition : termT t -> List (StatGen termT) -> StatGen termT
 
 record FuncGen (statT : Type) (rtn:C0Type) (args: Vect n C0Type) where
   constructor MkFuncGen
@@ -67,3 +68,5 @@ Show AccessMod where
            "body: " ++ (show $ body x) 
 (Show statT) => Show (QFunc statT) where
   show (MkFunc f) = show f
+
+

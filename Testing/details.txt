@@ -1,0 +1,3 @@
+ifconst\n
+1d0
+< true! outside

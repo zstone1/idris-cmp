@@ -52,6 +52,11 @@ data Instr :Type where
   Mov : Opr -> Opr-> Instr
   Syscall : Instr 
   Xor : Opr -> Opr -> Instr 
+  Jeq : String -> Instr
+  Jnz : String -> Instr
+  Jmp : String -> Instr
+  Cmp : Opr -> Opr -> Instr
+  Label : String -> Instr
 
 -------- Functions
 record AsmFunc where
@@ -114,9 +119,14 @@ pad5 : String -> String
 pad5 = padSpace 5
 
 Show (Instr) where
+  show (Jnz l) = pad5 "" ++ pad10 "jnz" ++ l
+  show (Jeq l) = pad5 "" ++ pad10 "jeq" ++ l
+  show (Jmp l) = pad5 "" ++ pad10 "jmp" ++ l
+  show (Cmp o1 o2) = pad5 "" ++ pad10 "cmp" ++ (pad5 (show o1)) ++ "," ++ (show o2)
   show (Mov o1 o2) = pad5 "" ++ pad10 "mov" ++ (pad5 (show o1)) ++ "," ++ (show o2)
   show Syscall = pad5 "" ++ "syscall"
   show (Xor o1 o2) = pad5 "" ++ pad10 "xor" ++ (pad5 (show o1)) ++ "," ++ (show o2)
+  show (Label s) = s ++ ":"
 
 Show AsmFunc where
   show (MkAsmFunc instrs name) = 

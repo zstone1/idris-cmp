@@ -54,11 +54,14 @@ linkStat (Return t val) = do
 linkStat (Execute n ts) = do 
   terms <- traverseM linkTerm ts
   pure $ Execute n terms
+linkStat (Condition gu bo) = do
+  (C0Int ** gu') <- linkTerm (_**gu) | ( t ** _) => raise (show t ++" is not valid for in an if clause.")
+  pure $ Condition gu' !(assert_total (traverseM linkStat bo))
 
 
 linkFunc : FuncFactorConst -> Comp FuncLink
 linkFunc (MkFunc {rtnTy} {args} (MkFuncGen a n ns b)) = do
-  stats <- traverseM linkStat b 
+  stats <- assert_total (traverseM linkStat b )
   pure (MkFunc {rtnTy} {args} (MkFuncGen a n ns stats ))
 
 export 

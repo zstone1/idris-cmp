@@ -29,6 +29,7 @@ Show (TermTyped t) where
 Show StatTyped where
   show (Return _ s) = "return " ++ show s
   show (Execute n vs) = n ++ "(" ++ show vs ++ ")"
+  show (Condition gu bo) = "if " ++ show gu ++ " then " ++ assert_total(show bo)
 
 %access private
 convertAccess : String -> Comp AccessMod
@@ -54,9 +55,15 @@ convertTerm (ApplyFunc n argsPrim) = do
 convertStat : StatPrim -> Comp StatTyped 
 convertStat (Return t) = do (t ** trm) <- convertTerm t
                             pure (Return t trm)
+
 convertStat (ExecTerm (ApplyFunc n args)) = pure $ Execute n !(traverseM convertTerm args)
 convertStat (ExecTerm (MkIntLit i)) = raise ("Cannot execute int  "++ show i)
 convertStat (ExecTerm (MkStrLit s)) = raise ("Cannot execute string " ++ s)
+
+convertStat (Condition gu bo) = do
+  (_**gu') <- (convertTerm gu) 
+  bo' <- assert_total (traverseM convertStat bo)
+  pure$ Condition gu' bo'
 
 
 

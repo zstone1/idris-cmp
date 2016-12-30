@@ -23,7 +23,7 @@ mkdir -p "asm"
 rm -r "results"
 mkdir -p "results"
 mkdir -p test-prgms
-"">"details.txt"
+>"details.txt"
 failures=()
 for tfile in  test-prgms/*.tst; do
 	### get the test's real name

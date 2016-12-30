@@ -12,10 +12,10 @@ data TermPrim : Type where
 |||An untyped representation of the contents of a function
 data StatPrim : Type where
   Return : TermPrim -> StatPrim
-  |||For applying funcs with no return. When we type the thing we'll figure out if it's valid
   ExecTerm : TermPrim ->  StatPrim
+  Condition : TermPrim -> List StatPrim -> StatPrim
   --Asign
-  --Condition
+  --While
 
 |||An untyped represetnation of the metadata of a function
 record FuncPrim where 
@@ -37,6 +37,7 @@ Show TermPrim where
 Show StatPrim where
   show (Return t) = "return "++ show t
   show (ExecTerm t) = show t
+  show (Condition guard bod) = assert_total$ "if (" ++show guard++") then " ++ show bod
 
 Show FuncPrim where
   show x = "access : " ++ (show $ access x) ++ "\n" ++
