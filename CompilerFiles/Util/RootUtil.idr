@@ -2,6 +2,7 @@ module RootUtil
 import public Util.EqualExt
 import public Util.FoldExt
 import public Util.Program
+import public Util.OneOf
 import public Util.EitherExt
 import public Util.EffectExt
 import public Util.SyntaxExt
