@@ -24,6 +24,8 @@ partial
 PadWithId : (l,r:List Type)-> (overrides : List (x:Type ** (SubElem x l, x-> OneOf r))) -> {auto totalprf : SubList l r} -> {t:Type} -> SubElem t ((map DPair.fst overrides)++l) -> t -> OneOf r
 
 PadWithId [] _ [] a _ = absurd a
-PadWithId (l::ls) r {totalprf = InList p n} [] a v = ?case3
+PadWithId (l::ls) r {totalprf = InList p n} [] a v with(a)
+  | Z = MkOneOf v
+  | S later = ?case2
 --PadWithId l r {totalprf = InList} ((o ** f) :: os) a v = ?case2
 
