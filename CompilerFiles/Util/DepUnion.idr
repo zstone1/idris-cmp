@@ -2,9 +2,10 @@ module DepUnion
 import Effects
 import Data.List
 import Data.Vect
+%access public export
 
 data DepUnion : List Type -> Type where
-  MkDepUnion : {l : List Type} -> {auto p : SubElem t l} -> (v : t) -> DepUnion l
+  MkDepUnion : {l : List Type} ->{t:Type} -> {auto p : SubElem t l} -> (v : t) -> DepUnion l
   
 Uninhabited (DepUnion []) where
   uninhabited (MkDepUnion {p} v )= absurd p
@@ -15,17 +16,18 @@ depMatch (MkDepUnion {l = t::us} {t} {p = Z} v) f = f t Z v
 depMatch (MkDepUnion {l = u::us} {t} {p = S later} v) f = 
   depMatch (MkDepUnion {l=us} v) (\a,b,c => f a (S b) c)
 
-ElemTrans : SubElem x ys -> SubList ys zs -> SubElem x zs
-ElemTrans x SubNil = absurd x
-ElemTrans Z (InList e _) = e
-ElemTrans {ys = y::ys'} (S later) (InList e l) = ElemTrans later l
+%hint
+elemTrans : SubElem x ys -> SubList ys zs -> SubElem x zs
+elemTrans x SubNil = absurd x
+elemTrans Z (InList e _) = e
+elemTrans {ys = y::ys'} (S later) (InList e l) = elemTrans later l
 
 %hint
 implicit
 Shuffle : DepUnion l -> {auto left: SubList l r} -> DepUnion r
 Shuffle (MkDepUnion {p} _) {left = SubNil} = absurd p
 Shuffle (MkDepUnion {p = Z} v) {left = InList e rest}  = MkDepUnion v
-Shuffle (MkDepUnion {p = S later} v) {left = InList e rest} = MkDepUnion {p = ElemTrans later rest} v
+Shuffle (MkDepUnion {p = S later} v) {left = InList e rest} = MkDepUnion {p = elemTrans later rest} v
 
 Show (DepUnion []) where
   show t = absurd t
@@ -60,35 +62,46 @@ readExample (MkDepUnion {p = S Z} v) = Right v
 readExample (MkDepUnion {p = (Z)} v) = Left v
 
 
-Convert : DepUnion l -> (f : (x:Type) ->  SubElem x l -> x -> DepUnion r) -> DepUnion r 
-Convert (MkDepUnion {p} {t} v) f = f t  p v
+convert : DepUnion l -> (f : (x:Type) ->  SubElem x l -> x -> DepUnion r) -> DepUnion r 
+convert (MkDepUnion {p} {t} v) f = f t p v
 
-PadWithId : (l,r:List Type)-> (overrides : List (x:Type ** x-> DepUnion r)) -> {auto totalprf : SubList l r} -> {t:Type} -> {auto a : SubElem t ((map DPair.fst overrides)++l)} -> t -> DepUnion r
-
-PadWithId [] _ [] {a} _ = absurd a
-PadWithId (l::ls) r {totalprf = InList p n} [] {a} v with(a)
+padWithId : (l,r:List Type)-> (overrides : List (x:Type ** x-> DepUnion r)) -> {auto totalprf : SubList l r} -> {t:Type} -> {auto a : SubElem t ((map DPair.fst overrides)++l)} -> t -> DepUnion r
+padWithId [] _ [] {a} _ = absurd a
+padWithId (l::ls) r {totalprf = InList p n} [] {a} v with(a)
   | Z = MkDepUnion v
-  | S later =  PadWithId ls r {totalprf = n} [] {a=later} v
-PadWithId l r {totalprf = InList} ((o ** f) :: os) {a} v with (a)
+  | S later =  padWithId ls r {totalprf = n} [] {a=later} v
+padWithId l r {totalprf = InList} ((o ** f) :: os) {a} v with (a)
   | Z = f v
-  | S later = PadWithId l r os {a=later} v
+  | S later = padWithId l r os {a=later} v
 
+private
 T : List Type
 T = [String,Char]
 
-PadWithIdTrivial : DepUnion [String, Bool]
-PadWithIdTrivial = 
-  PadWithId [String, Bool] [String, Bool] [] {t=Bool} True
+private
+padWithIdTrivial : (MkDepUnion {l=[String, Bool]}{t=Bool} True) = padWithId [String, Bool] [String, Bool] [] {t=Bool} True
+padWithIdTrivial = Refl
 
-PadWithIdTest : String 
-PadWithIdTest = show $ PadWithId [String] T [(_ ** (\b => if b then (MkDepUnion {l=T} {t=Char} 't') else (MkDepUnion {l=T} {t=Char} 'f')))] {t=String} "hi" 
+private
+padWithIdTest1 : "\"hi\"" = show $ padWithId [String] T [(_ ** (\b => if b then (MkDepUnion {l=T} {t=Char} 't') else (MkDepUnion {l=T} {t=Char} 'f')))] {t=String} "hi" 
+padWithIdTest1 = Refl
 
-Push : DepUnion (x::xs) -> (x -> DepUnion (ys ++ xs)) -> DepUnion (ys ++ xs)
-Push d f {xs}{ys} = Convert d (\t,a => PadWithId xs (ys ++ xs) [(_**f)] {t=t}{a=a})
+private
+padWithIdTest2 : "'f'" = show $ padWithId [String] T [(_ ** (\b => if b then (MkDepUnion {l=T} {t=Char} 't') else (MkDepUnion {l=T} {t=Char} 'f')))] {t=Bool} False
+padWithIdTest2 = Refl
 
+push : DepUnion (x::xs) -> (x -> DepUnion (ys ++ xs)) -> DepUnion (ys ++ xs)
+push d f {xs}{ys} = convert d (\t,a => padWithId xs (ys ++ xs) [(_**f)] {t=t}{a=a})
 
+private
+pushTest : "False" = show $ push {ys = []} (MkDepUnion {l=[String, Bool, Char]} {t=Bool} False) (\s => MkDepUnion True)
+pushTest = Refl
 
+pushOne : DepUnion (x::xs) -> (x -> y) -> DepUnion(y::xs)
+pushOne d f {y} = push {ys = [y]} d (MkDepUnion . f) 
 
+collapse : DepUnion (x :: xs) -> (x -> DepUnion xs) -> DepUnion xs
+collapse d f = push {ys = []} d f
 
 
 
