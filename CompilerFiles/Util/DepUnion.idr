@@ -5,10 +5,14 @@ import Data.Vect
 %access public export
 
 data DepUnion : List Type -> Type where
-  MkDepUnion : {l : List Type} ->{t:Type} -> {auto p : SubElem t l} -> (v : t) -> DepUnion l
+  MkDepUnion : {l : List Type} ->{t:Type} -> (v : t) -> {auto p : SubElem t l} -> DepUnion l
   
 Uninhabited (DepUnion []) where
   uninhabited (MkDepUnion {p} v )= absurd p
+
+extract: DepUnion [x] -> x
+extract (MkDepUnion v {p = Z}) = v
+extract (MkDepUnion _ {p = S l}) = absurd l
 
 depMatch : DepUnion l -> (f: (x:Type) -> SubElem x l -> x -> t) -> t
 depMatch (MkDepUnion {l=[]} {p} _) _ = absurd p
@@ -62,10 +66,10 @@ readExample (MkDepUnion {p = S Z} v) = Right v
 readExample (MkDepUnion {p = (Z)} v) = Left v
 
 
-convert : DepUnion l -> (f : (x:Type) ->  SubElem x l -> x -> DepUnion r) -> DepUnion r 
-convert (MkDepUnion {p} {t} v) f = f t p v
+convert : DepUnion l -> (f : (x:Type) ->  x -> SubElem x l -> DepUnion r) -> DepUnion r 
+convert (MkDepUnion {p} {t} v) f = f t v p
 
-padWithId : (l,r:List Type)-> (overrides : List (x:Type ** x-> DepUnion r)) -> {auto totalprf : SubList l r} -> {t:Type} -> {auto a : SubElem t ((map DPair.fst overrides)++l)} -> t -> DepUnion r
+padWithId : (l,r:List Type)-> (overrides : List (x:Type ** x-> DepUnion r)) -> {auto totalprf : SubList l r} -> {t:Type} -> t ->  {auto a : SubElem t ((map DPair.fst overrides)++l)} -> DepUnion r
 padWithId [] _ [] {a} _ = absurd a
 padWithId (l::ls) r {totalprf = InList p n} [] {a} v with(a)
   | Z = MkDepUnion v
@@ -74,34 +78,56 @@ padWithId l r {totalprf = InList} ((o ** f) :: os) {a} v with (a)
   | Z = f v
   | S later = padWithId l r os {a=later} v
 
+
 private
 T : List Type
 T = [String,Char]
 
 private
-padWithIdTrivial : (MkDepUnion {l=[String, Bool]}{t=Bool} True) = padWithId [String, Bool] [String, Bool] [] {t=Bool} True
+padWithIdTrivial : (MkDepUnion {l=[String, Bool]}{t=Bool} True) = padWithId [String, Bool] [String, Bool] [] True
 padWithIdTrivial = Refl
 
 private
-padWithIdTest1 : "\"hi\"" = show $ padWithId [String] T [(_ ** (\b => if b then (MkDepUnion {l=T} {t=Char} 't') else (MkDepUnion {l=T} {t=Char} 'f')))] {t=String} "hi" 
+padWithIdTest1 : "\"hi\"" = show $ padWithId [String] T [(_ ** (\b => if b then (MkDepUnion 't') else (MkDepUnion 'f')))] "hi" 
 padWithIdTest1 = Refl
 
 private
-padWithIdTest2 : "'f'" = show $ padWithId [String] T [(_ ** (\b => if b then (MkDepUnion {l=T} {t=Char} 't') else (MkDepUnion {l=T} {t=Char} 'f')))] {t=Bool} False
+padWithIdTest2 : "'f'" = show $ padWithId [String] T [(_ ** (\b => if b then (MkDepUnion 't') else (MkDepUnion 'f')))] False
 padWithIdTest2 = Refl
 
-push : DepUnion (x::xs) -> (x -> DepUnion (ys ++ xs)) -> DepUnion (ys ++ xs)
-push d f {xs}{ys} = convert d (\t,a => padWithId xs (ys ++ xs) [(_**f)] {t=t}{a=a})
+|||Applies @f to the head of @d if it's a match. Otherwise it's a no-op, modulo type changes.
+push : (d:DepUnion (x::xs)) -> (f: x -> DepUnion (ys ++ xs)) -> DepUnion (ys ++ xs)
+push d f {xs}{ys} = convert d (\t,v,a => padWithId xs (ys ++ xs) [(_**f)] v {t=t}{a=a})
 
 private
-pushTest : "False" = show $ push {ys = []} (MkDepUnion {l=[String, Bool, Char]} {t=Bool} False) (\s => MkDepUnion True)
+pushTest : "False" = show $ push {ys = []} (MkDepUnion {l=[String, Bool, Char]} False) (\s => MkDepUnion True)
 pushTest = Refl
 
-pushOne : DepUnion (x::xs) -> (x -> y) -> DepUnion(y::xs)
-pushOne d f {y} = push {ys = [y]} d (MkDepUnion . f) 
+|||Applies a simple map to the head of @d, if it's a match.
+pushOne : (d: DepUnion (x::xs)) -> (f: x -> y) -> DepUnion(y::xs)
+pushOne d f {y} = push {ys = [y]} d (\x => MkDepUnion(f x)) 
 
-collapse : DepUnion (x :: xs) -> (x -> DepUnion xs) -> DepUnion xs
+|||If @d is a match for @x, the type is collapsed into the other types of the union.
+collapse : (d: DepUnion (x :: xs)) -> (f: x -> DepUnion xs) -> DepUnion xs
 collapse d f = push {ys = []} d f
+
+
+private
+collapseHelper : DepUnion [Nat, String]
+collapseHelper = 
+  let base = MkDepUnion {l = [String, Nat, Bool]} False in --This tests that shuffle is working implicitly.
+      collapse base (\i => if i then MkDepUnion "it was true"  else MkDepUnion "it was false" )
+
+private
+collapseTest : "\"it was false\"" = show DepUnion.collapseHelper
+collapseTest = Refl
+
+
+
+
+
+
+
 
 
 
