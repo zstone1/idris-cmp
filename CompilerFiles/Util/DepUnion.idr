@@ -124,7 +124,7 @@ collapseTest = Refl
 
 
 syntax dcase [d] "of" [f] = 
-  extract $ convert (Shuffle d) (\t,x,p => MkDepUnion ((toFuncForm f t x p )))
+  extract $ convert (Shuffle d) (\t,x,p => MkDepUnion ((toFuncForm f t x p ))) --composition doesn't play nice with implicit params
 
 syntax "|" [t] end [after] = t :: after
 syntax "|" [t] term = | t end []
@@ -135,6 +135,7 @@ toFuncForm : (l: List (t:Type ** (t-> u))) -> (t:Type) -> (v:t) -> (SubElem t (F
 toFuncForm ((t1 ** f1) :: fs) t1 v (Z) = f1 v
 toFuncForm ((t1 ** f1) :: fs) t v (S later) = toFuncForm fs t v later
 
+private
 test2 : List (t:Type ** (t-> Bool))
 test2 = | String := i  => True end 
         | Nat := s => False end []
