@@ -24,12 +24,6 @@ NaryFuncSig {t} = ?foo
 
 -- Forall t (ForAll a b c d coll ( t a b c d coll `implements` FuncSig) => (n : Nat ** a b c d (Vect n)) ` implements FuncSig)
 
-implementation Traversable coll => FuncSig (PFuncSig pty accessTy rtnDecor argDecor coll)  pty accessTy rtnDecor argDecor coll where
-  getAccess = access
-  getRtn = rtn
-  getName = name
-  getArgs = args
-
 --implementation (Traversable coll => FuncSig t a b c d coll) => FuncSig (n:Nat ** (t a b c d (Vect n))) a b c d (Vect n) where
 
 --implementation FuncSig (NaryFuncSig pty accessTy rtnDecor argDecor) pty accessTy rtnDecor argDecor (Vect n) where

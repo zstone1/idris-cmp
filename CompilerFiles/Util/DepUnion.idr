@@ -125,10 +125,15 @@ collapseTest = Refl
 
 syntax dcase [d] "of" [f] = 
   extract $ convert (Shuffle d) (\t,x,p => MkDepUnion ((toFuncForm f t x p ))) --composition doesn't play nice with implicit params
+syntax [t] ":" {i} "=>" [f] "%|" = (t ** \i : t => f)
 
-syntax "|" [t] end [after] = t :: after
-syntax "|" [t] term = | t end []
-syntax [t] ":=" {i} "=>" [f] = ( t ** \i : t => f )
+--syntax [before] "|" [t] = t :: before
+--syntax [t] term = | t end []  
+syntax [t] ":" {i} "=>" [f] = (t ** \i : t => f)
+infixl 0 |%
+
+(|%) : List (t:Type ** (t -> u)) -> (t:Type ** (t -> u)) -> List (t:Type ** (t -> u))
+(|%) l a = a :: l
 
 total   
 toFuncForm : (l: List (t:Type ** (t-> u))) -> (t:Type) -> (v:t) -> (SubElem t (Functor.map DPair.fst l)) -> u
@@ -136,19 +141,13 @@ toFuncForm ((t1 ** f1) :: fs) t1 v (Z) = f1 v
 toFuncForm ((t1 ** f1) :: fs) t v (S later) = toFuncForm fs t v later
 
 private
-test2 : List (t:Type ** (t-> Bool))
-test2 = | String := i  => True end 
-        | Nat := s => False end []
-
-
-private
 SynTestVal : Bool 
 SynTestVal = 
   let base = MkDepUnion {l=[Char, String, Bool]} True in
-  dcase base of 
-  | Char := i => False end
-  | Bool := b => b end
-  | String := s => True term
+  dcase base of []
+  |% Char : i => False %|
+  |% Bool : b => b %|
+  |% String : s => False %|
 
 private 
 synTest : True = SynTestVal
