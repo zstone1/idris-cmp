@@ -1,45 +1,75 @@
 module ProgramModels
 import Data.Vect
 import Util.RootUtil
+%access public export
 
-record Class where
-  constructor MkClass 
-  students : Vect n String
+--Function types
 
-Foo : Class -> String
-Foo (MkClass {n} x) = show x
+record FuncSigTypes where
+  constructor MkFunSigTypes
+  nameTy : Type
+  pty : Type
+  accessTy : Type
+  rtnDecor : Type -> Type
+  argDecor : Type -> Type
 
-record FuncSig where
+record FuncSig (tys : FuncSigTypes) where
   constructor MkFuncSig
-  {pty : Type}
-  {rtnDecor : Type -> Type}
-  {argDecor : Type -> Type}
-  access : accessTy
-  rtn : rtnDecor pty
-  name : nameTy
-  args : Vect n (argDecor pty) 
+  access : accessTy tys
+  rtn : (rtnDecor tys)  (pty tys)
+  name : nameTy tys
+  args : Vect n ((argDecor tys) (pty tys)) 
 
-arity : FuncSig -> Nat
+arity : FuncSig t -> Nat
 arity (MkFuncSig {n} _ _ _ _ ) = n
 
-record Statement where
+record StatementTypes where
+  constructor MkStagementTypes
+  valTypes : List Type
+  contextTy : Type
+
+record Statement (tys : StatementTypes) where  
   constructor MkStatement
-  {l : List Type}
-  val : DepUnion l
-  scope : scopeTy  
+  val : DepUnion (valTypes tys)
 
-record Func where
-  constructor MkFunc
-  sig : FuncSig
-  stat : Vect n Statement
+-- terms
 
-record Mod where
+data IntLiteral : Type  where
+  MkIntLit : Nat -> IntLiteral
+
+data StringLiteral : Type where
+  MkStringLit : String -> StringLiteral
+
+record FuncApplication (argTy : Type) where
+  constructor MkFuncApplication
+  name : String
+  args : List argTy
+
+Term : List Type -> Type
+Term l = DepUnion l 
+
+
+
+--constants
+
+--modules
+record Mod (statTys: StatementTypes) (funcTy : FuncSigTypes)where
    constructor  MkMod
    name : String
-   funcs : List Func
-   constants : List constTy
-   customTypes : List customTy
+   funcs : List (FuncSig funcTy, Statement statTys)
+--   constants : List constTy
+--   customTypes : List customTy
 
-record Program where
+record Program (statTys: StatementTypes) (funcTy : FuncSigTypes) where
   constructor MkProgram 
-  modules : List Mod
+  modules : List (Mod statTys funcTy)
+
+
+
+
+
+
+
+
+
+

@@ -6,29 +6,39 @@ import Lightyear.Char
 import Lightyear.Strings
 %access private
 %default partial
+
+total
+ParsedTerm : Nat -> Type
+ParsedTerm Z = DepUnion [IntLiteral, StringLiteral]
+ParsedTerm (S n) = DepUnion [IntLiteral, StringLiteral, FuncApplication (ParsedTerm n)]
+
 rtn : Parser ()
 rtn = token "return"
+ 
+parseIntLit : Parser (ParsedTerm 0)
+parseIntLit = [| (dep {t = IntLiteral} . MkIntLit) integer |]
 
-{-  
-parseIntLit : Parser TermPrim
-parseIntLit = [| MkIntLit integer |]
+parseStrLit : Parser (ParsedTerm 0)
+parseStrLit = [| (dep {t = StringLiteral} . MkStringLit) (quoted '"') |]
 
-parseStrLit : Parser TermPrim
-parseStrLit = [| MkStrLit $ quoted '"' |]
 
 mutual
-  parseFuncApp : Parser TermPrim
-  parseTerm : Parser TermPrim
+  parseFuncApp : Parser (n:Nat ** ParsedTerm n)
+  parseTerm : Parser (n: Nat ** ParsedTerm n)
 
   parseFuncApp = do name <- some letter <* spaces
                     args <- between (token "(") (token ")") (parseTerm `sepBy` token ",") 
-                    pure $ ApplyFunc (pack name) (fromList args)
+                    let complexity = max (map DPair.fst args)
+                    let x = MkFuncApplication (ParsedTerm complexity) (pack name) (map DPair.snd args)
+                    ?foo
 
-  parseTerm =  parseIntLit
-           <|> parseStrLit
-           <|> parseFuncApp
-           <?> "Failed to parse literal"
+  parseTerm =  ?parseTerm 
+   -- parseIntLit
+    --       <|> parseStrLit
+    --       <|> parseFuncApp
+    --       <?> "Failed to parse literal"
 
+{-
 mutual 
   parseStat : Parser StatPrim
   parseRtn : Parser StatPrim

@@ -14,6 +14,9 @@ extract: DepUnion [x] -> x
 extract (MkDepUnion v {p = Z}) = v
 extract (MkDepUnion _ {p = S l}) = absurd l
 
+dep: {t:Type} -> {l : List Type} -> {auto p : SubElem t l} -> (v:t) -> DepUnion l
+dep {t} {l} {p} v = MkDepUnion v
+
 depMatch : DepUnion l -> (f: (x:Type) -> SubElem x l -> x -> t) -> t
 depMatch (MkDepUnion {l=[]} {p} _) _ = absurd p
 depMatch (MkDepUnion {l = t::us} {t} {p = Z} v) f = f t Z v
