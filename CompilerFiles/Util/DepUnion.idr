@@ -135,7 +135,6 @@ infixl 0 |%
 (|%) : List (t:Type ** (t -> u)) -> (t:Type ** (t -> u)) -> List (t:Type ** (t -> u))
 (|%) l a = a :: l
 
-total   
 toFuncForm : (l: List (t:Type ** (t-> u))) -> (t:Type) -> (v:t) -> (SubElem t (Functor.map DPair.fst l)) -> u
 toFuncForm ((t1 ** f1) :: fs) t1 v (Z) = f1 v
 toFuncForm ((t1 ** f1) :: fs) t v (S later) = toFuncForm fs t v later

@@ -1,39 +1,43 @@
 module ProgramModels
 import Data.Vect
+import Util.RootUtil
 
-interface Traversable coll => FuncSig (a : Type)
-  (pty : Type)
-  (accessTy: Type) 
-  (rtnDecor : Type -> Type)  
-  (argDecor : Type -> Type) 
-  (coll : Type -> Type) where
-  getAccess : a -> accessTy
-  getRtn : a -> rtnDecor pty
-  getName : a -> String
-  getArgs : a -> coll (argDecor pty)
+record Class where
+  constructor MkClass 
+  students : Vect n String
 
-record PFuncSig (pty : Type) (accessTy: Type) (rtnDecor : Type -> Type)  (argDecor : Type -> Type) (coll : Type -> Type) where
-  constructor MkPFuncSig
+Foo : Class -> String
+Foo (MkClass {n} x) = show x
+
+record FuncSig where
+  constructor MkFuncSig
+  {pty : Type}
+  {rtnDecor : Type -> Type}
+  {argDecor : Type -> Type}
   access : accessTy
   rtn : rtnDecor pty
-  name : String
-  args : coll (argDecor pty)
+  name : nameTy
+  args : Vect n (argDecor pty) 
 
-NaryFuncSig : Show t => t -> Type 
-NaryFuncSig {t} = ?foo
+arity : FuncSig -> Nat
+arity (MkFuncSig {n} _ _ _ _ ) = n
 
--- Forall t (ForAll a b c d coll ( t a b c d coll `implements` FuncSig) => (n : Nat ** a b c d (Vect n)) ` implements FuncSig)
+record Statement where
+  constructor MkStatement
+  {l : List Type}
+  val : DepUnion l
+  scope : scopeTy  
 
---implementation (Traversable coll => FuncSig t a b c d coll) => FuncSig (n:Nat ** (t a b c d (Vect n))) a b c d (Vect n) where
+record PFunc where
+  constructor MkFunc
+  sig : FuncSig
+  stat : Vect n Statement
 
---implementation FuncSig (NaryFuncSig pty accessTy rtnDecor argDecor) pty accessTy rtnDecor argDecor (Vect n) where
---  getAccess = access . snd
+record Prgm (funcTy : Type) (constTy: Type) (customTy : Type) (metaTy : Type)  where
+   constructor  MkPrgm
+   funcs : List funcTy
+   constants : List constTy
+   customTypes : List customTy
+   metaData : metaTy
 
---data Prgm : (funcTy, constTy: Type) ->  (meta : (List funcTy) -> (List constTy) -> Type) -> Type  where
---   MkPrgm : {funcTy,constTy  : Type} ->
---            {meta : (List funcTy) -> (List constTy) -> Type} ->
---            (funcs : List funcTy) -> 
---            (consts : List constTy) -> 
---            (facts : meta funcs consts) ->
---            Program funcTy constTy meta
 
