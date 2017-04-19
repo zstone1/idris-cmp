@@ -1,6 +1,6 @@
 module Main
 import Util.RootUtil
---import Interpret.RootInterpret
+import Interpret.RootInterpret
 --import TypeCheck.RootTypeCheck
 --import Asm.RootAsm
 --import Conduct.RootConduct

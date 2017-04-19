@@ -28,16 +28,18 @@ record Statement where
   val : DepUnion l
   scope : scopeTy  
 
-record PFunc where
+record Func where
   constructor MkFunc
   sig : FuncSig
   stat : Vect n Statement
 
-record Prgm (funcTy : Type) (constTy: Type) (customTy : Type) (metaTy : Type)  where
-   constructor  MkPrgm
-   funcs : List funcTy
+record Mod where
+   constructor  MkMod
+   name : String
+   funcs : List Func
    constants : List constTy
    customTypes : List customTy
-   metaData : metaTy
 
-
+record Program where
+  constructor MkProgram 
+  modules : List Mod

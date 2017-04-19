@@ -1,6 +1,6 @@
 module Parser
 import Util.RootUtil
-import Interpret.ExprPrim
+import Models.RootModels
 import Lightyear
 import Lightyear.Char
 import Lightyear.Strings
@@ -9,6 +9,7 @@ import Lightyear.Strings
 rtn : Parser ()
 rtn = token "return"
 
+{-  
 parseIntLit : Parser TermPrim
 parseIntLit = [| MkIntLit integer |]
 
@@ -94,7 +95,7 @@ test s = case parse parseProgram' s of
 
 
 
-
+-}
 
 
 
