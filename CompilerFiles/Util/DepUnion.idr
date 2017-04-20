@@ -33,10 +33,6 @@ addSubElem : SubElem x (y::y::ys) -> SubElem x (y::ys)
 addSubElem Z = Z
 addSubElem (S l) = l
 
---I got bored proving this. a bit of a pain, apparently
-sublistTrans : SubList xs ys -> SubList ys zs -> SubList xs zs
-sublistTrans = ?sublist_transitivity
-
 %hint
 implicit
 Shuffle : DepUnion l -> {auto left: SubList l r} -> DepUnion r

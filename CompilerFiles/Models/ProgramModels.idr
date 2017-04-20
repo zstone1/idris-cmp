@@ -53,21 +53,22 @@ Term l = DepUnion l
 --constants
 
 --modules
-record Mod (statTys: StatementTypes) (funcTy : FuncSigTypes)where
+record Mod (statTy: Type) (funcTy : FuncSigTypes)where
    constructor  MkMod
    name : String
-   funcs : List (FuncSig funcTy, Statement statTys)
+   funcs : List (FuncSig funcTy, List (statTys))
 --   constants : List constTy
 --   customTypes : List customTy
 
-record Program (statTys: StatementTypes) (funcTy : FuncSigTypes) where
+record Program (statTy: Type) (funcTy : FuncSigTypes) where
   constructor MkProgram 
-  modules : List (Mod statTys funcTy)
+  modules : List (Mod statTy funcTy)
 
 
 
 
-
+implementation Show (Mod a b) where
+  show n = "it's a module"
 
 
 
