@@ -29,6 +29,14 @@ elemTrans x SubNil = absurd x
 elemTrans Z (InList e _) = e
 elemTrans {ys = y::ys'} (S later) (InList e l) = elemTrans later l
 
+addSubElem : SubElem x (y::y::ys) -> SubElem x (y::ys)
+addSubElem Z = Z
+addSubElem (S l) = l
+
+--I got bored proving this. a bit of a pain, apparently
+sublistTrans : SubList xs ys -> SubList ys zs -> SubList xs zs
+sublistTrans = ?sublist_transitivity
+
 %hint
 implicit
 Shuffle : DepUnion l -> {auto left: SubList l r} -> DepUnion r
@@ -60,9 +68,11 @@ Show a => Show (DepUnion [a]) where
     showf _ (S (S Z)) v = show v
     showf _ (S (S (S later))) _ = absurd later
 
+private
 writeExample : (String, String) -> DepUnion [(String, String), Bool]
 writeExample s = MkDepUnion s
 
+private
 readExample : DepUnion [String, Integer] -> Either String Integer
 readExample (MkDepUnion {p = S (S later)} v) = absurd later
 readExample (MkDepUnion {p = S Z} v) = Right v

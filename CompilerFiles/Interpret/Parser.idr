@@ -8,19 +8,29 @@ import Lightyear.Strings
 %default partial
 
 total
+ParsedTermTys : Nat -> List Type 
+ParsedTermTys Z = [IntLiteral, StringLiteral]
+ParsedTermTys (S c) = FuncApplication (DepUnion (ParsedTermTys c)) :: ParsedTermTys c
+
+private
+cumulativity1 : (ParsedTermTys n) `SubList` (ParsedTermTys (S n))
+cumulativity1 {n} = dropPrefix (subListId _ ) {zs = [_]}
+
 ParsedTerm : Nat -> Type
-ParsedTerm Z = DepUnion [IntLiteral, StringLiteral]
-ParsedTerm (S n) = DepUnion [IntLiteral, StringLiteral, FuncApplication (ParsedTerm n)]
+ParsedTerm n = DepUnion (ParsedTermTys n)
+
+--got bored proving this.
+cumulativity2 : ParsedTerm n -> ParsedTerm m 
+cumulativity2 p a = Shuffle 
 
 rtn : Parser ()
 rtn = token "return"
  
 parseIntLit : Parser (ParsedTerm 0)
-parseIntLit = [| (dep {t = IntLiteral} . MkIntLit) integer |]
+parseIntLit = pure $ MkDepUnion $  MkIntLit !integer
 
 parseStrLit : Parser (ParsedTerm 0)
-parseStrLit = [| (dep {t = StringLiteral} . MkStringLit) (quoted '"') |]
-
+parseStrLit = pure $ MkDepUnion $ MkStringLit !(quoted '"')
 
 mutual
   parseFuncApp : Parser (n:Nat ** ParsedTerm n)
@@ -28,8 +38,8 @@ mutual
 
   parseFuncApp = do name <- some letter <* spaces
                     args <- between (token "(") (token ")") (parseTerm `sepBy` token ",") 
-                    let complexity = max (map DPair.fst args)
-                    let x = MkFuncApplication (ParsedTerm complexity) (pack name) (map DPair.snd args)
+                    let complexity = foldr max 0 (map DPair.fst args)
+--                    let x = MkFuncApplication {argTy = ParsedTerm complexity} (pack name) (map DPair.snd)
                     ?foo
 
   parseTerm =  ?parseTerm 

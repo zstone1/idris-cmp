@@ -16,3 +16,4 @@ import public Util.Projective
 import public Util.VectExt
 import public Util.BoolExt
 import public Util.Lens
+import public Util.Hierarchy
