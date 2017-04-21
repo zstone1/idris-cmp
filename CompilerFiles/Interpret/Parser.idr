@@ -7,69 +7,22 @@ import Lightyear.Strings
 %access private
 %default partial
 
-total
-public export
-ParsedTermTys : Nat -> List Type 
-ParsedTermTys Z = [IntLiteral, StringLiteral]
-ParsedTermTys (S c) = FuncApplication (DepUnion (ParsedTermTys c)) :: ParsedTermTys c
 
-total
-public export
-ParsedTermC : Nat -> Type
-ParsedTermC n = DepUnion (ParsedTermTys n)
+total public export
+ParsedTermHierarchy : Hierarchy
+ParsedTermHierarchy Z = [IntLiteral, StringLiteral]
+ParsedTermHierarchy (S c) = [FuncApplication (assert_total $ ParsedTermHierarchy #. c)]
 
-total
-public export
+total public export
 ParsedTerm : Type
-ParsedTerm = (n : Nat ** ParsedTermC n)
-
-private total
-cumulativity1 : (ParsedTermTys n) `SubList` (ParsedTermTys (S n))
-cumulativity1 {n} = dropPrefix (subListId _ ) {zs = [_]}
-
-private total 
-maxLemma : x `LTE` maximum x y
-maxLemma {x = Z} {y} = LTEZero
-maxLemma {x = S n} {y = Z} = lteRefl
-maxLemma {x = S a} {y = S b} = LTESucc $ maxLemma
-
-private total
-cumulativity2 : (ParsedTermC n) -> (ParsedTermC (m+n))
-cumulativity2 {m = Z} a = a
-cumulativity2 {m = S k} a = Shuffle {left = cumulativity1} (cumulativity2 a)
-
-private total
-lteHelper : a+x `LTE` a+y -> x `LTE` y
-lteHelper {a=Z} = id
-lteHelper {a = S i} = lteHelper . fromLteSucc
-
-private total
-cumulativity3 : (n,m:Nat) -> .(n `LTE` m) -> ParsedTermC n -> ParsedTermC m
-cumulativity3 n m a t with (cmp n m)
-  cumulativity3 x x a t | CmpEQ = t
-  cumulativity3 n (n+S i) a t | CmpLT i = rewrite plusCommutative n (S i) in cumulativity2 {n=n}{m=S i} t
-  cumulativity3 (m+S i) m a t | CmpGT i =
-    let a' :(m + S i `LTE` m + 0) = (rewrite plusZeroRightNeutral m in a) in
-      absurd $ lteHelper a'
-
-
-
-liftComplexity : (List ParsedTerm) -> (n : Nat ** List (ParsedTermC n))
-liftComplexity l = (0 ** [])
-{-
-  let complexity = foldr maximum 0 (map fst l) in
-  (_ ** map (liftTerm complexity) l) where
-     liftTerm : (c :Nat) -> ParsedTerm -> ParsedTermC c
-       liftTerm c (n ** term) = 
-       let lte : (n `LTE` c)  = believe_me () in
-       cumulativity3 n c lte term
--}
+ParsedTerm = Member ParsedTermHierarchy
 
 rtn : Parser ()
 rtn = token "return"
  
 parseIntLit : Parser ParsedTerm
-parseIntLit = pure (0 **  MkDepUnion $  MkIntLit !integer)
+parseIntLit = pure (0 **  MkDepUnion $ MkIntLit !integer)
+
 
 parseStrLit : Parser ParsedTerm
 parseStrLit = pure (0 ** MkDepUnion $ MkStringLit !(quoted '"'))
@@ -82,7 +35,7 @@ mutual
                     args <- between (token "(") (token ")") (parseTerm `sepBy` token ",") 
                     let (n ** lifted) = liftComplexity args
                     let val = MkFuncApplication (pack name) lifted
-                    pure $ ( _ ** MkDepUnion {l=ParsedTermTys (S n)} val)
+                    pure $ ( _ ** MkDepUnion {l= level ParsedTermHierarchy (S n)} val)
 
   parseTerm =  parseIntLit
            <|> parseStrLit
@@ -106,25 +59,17 @@ record ParsedCondition (ty:Type) where
   guard : ParsedTerm
   body : List ty
 
-total
-public export
-ParsedStatTys : Nat -> List Type
-ParsedStatTys Z = [ParsedReturn, ParsedExec]
-ParsedStatTys (S n) = [ParsedCondition (DepUnion (ParsedStatTys n))] ++ ParsedStatTys n
 
 total
 public export
-ParsedStatC : Nat -> Type
-ParsedStatC = DepUnion . ParsedStatTys
+ParsedStatHierarchy : Hierarchy
+ParsedStatHierarchy Z = [ParsedReturn, ParsedExec]
+ParsedStatHierarchy (S n) = [ParsedCondition (assert_total $ ParsedStatHierarchy #. n)]
 
 total
 public export
 ParsedStat : Type
-ParsedStat = (n : Nat ** ParsedStatC n)
-
-total
-liftComplexityStat : (List ParsedStat) -> (n : Nat ** List (ParsedStatC n))
-liftComplexityStat _ = (0 ** [])
+ParsedStat = Member ParsedStatHierarchy
 
 mutual 
   parseStat : Parser ParsedStat
@@ -133,17 +78,22 @@ mutual
   parseCondition : Parser ParsedStat
   parseBody : Parser (List ParsedStat)
 
-  parseRtn = rtn *> pure ( Z ** MkDepUnion $ MkParsedReturn !parseTerm)
+  parseRtn = do rtn
+                t <- parseTerm 
+                pure ( Z ** MkDepUnion ( MkParsedReturn t))
 
-  parseExecTerm = pure ( Z **  MkDepUnion $ MkParsedExec !parseTerm)
+  parseExecTerm = do t <- parseTerm 
+                     pure ( Z **  MkDepUnion (MkParsedExec t))
+
+
          
   parseCondition = do token "if" 
                       token "(" 
                       gu <- parseTerm
                       token ")"
                       bo <- parseBody
-                      let (n ** lifted) = liftComplexityStat bo
-                      pure ( _ ** MkDepUnion {l = ParsedStatTys (S n)} $ MkParsedCondition gu lifted)
+                      let (n ** lifted) = liftComplexity bo
+                      pure ( _ ** MkDepUnion {l = level ParsedStatHierarchy (S n)} $ MkParsedCondition gu lifted)
 
   parseStat = (parseRtn <* semi)
            <|> parseCondition
@@ -207,11 +157,8 @@ parseProgram s = assert_total $ case parse parseMod s of
                                    Left e => raise e
                                    Right p => pure (MkProgram [p])
 
-test : String -> String
-test s = case parse parseTerm s of
-              Left e => e
-              Right a => show a
-
+test : String -> Either String ParsedStat
+test s = parse parseStat s
 
 
 

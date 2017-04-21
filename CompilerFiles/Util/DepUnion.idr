@@ -65,12 +65,7 @@ Show a => Show (DepUnion [a]) where
     showf _ (S (S (S later))) _ = absurd later
 
 Show (DepUnion (a :: b :: c :: d :: xs)) where
-  show d = depMatch d showf where
-    showf : (Show a, Show b, Show c) => (x:Type) -> (SubElem x [a,b,c])  -> x -> String
-    showf _ Z v = show v
-    showf _ (S Z) v = show v
-    showf _ (S (S Z)) v = show v
-    showf _ (S (S (S later))) _ = "later"
+  show d = "too deep"
 
 private
 writeExample : (String, String) -> DepUnion [(String, String), Bool]
