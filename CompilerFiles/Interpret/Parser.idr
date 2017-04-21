@@ -7,22 +7,11 @@ import Lightyear.Strings
 %access private
 %default partial
 
-
-total public export
-ParsedTermHierarchy : Hierarchy
-ParsedTermHierarchy Z = [IntLiteral, StringLiteral]
-ParsedTermHierarchy (S c) = [FuncApplication (assert_total $ ParsedTermHierarchy #. c)]
-
-total public export
-ParsedTerm : Type
-ParsedTerm = Member ParsedTermHierarchy
-
 rtn : Parser ()
 rtn = token "return"
  
 parseIntLit : Parser ParsedTerm
 parseIntLit = pure (0 **  MkDepUnion $ MkIntLit !integer)
-
 
 parseStrLit : Parser ParsedTerm
 parseStrLit = pure (0 ** MkDepUnion $ MkStringLit !(quoted '"'))
@@ -41,35 +30,6 @@ mutual
            <|> parseStrLit
            <|> parseFuncApp
            <?> "Failed to parse literal"
-
-public export
-record ParsedReturn where
-  constructor MkParsedReturn
-  rtnVal : ParsedTerm
-
-public export
-record ParsedExec where
-  constructor MkParsedExec
-  execVal : ParsedTerm
-
-
-public export
-record ParsedCondition (ty:Type) where
-  constructor MkParsedCondition
-  guard : ParsedTerm
-  body : List ty
-
-
-total
-public export
-ParsedStatHierarchy : Hierarchy
-ParsedStatHierarchy Z = [ParsedReturn, ParsedExec]
-ParsedStatHierarchy (S n) = [ParsedCondition (assert_total $ ParsedStatHierarchy #. n)]
-
-total
-public export
-ParsedStat : Type
-ParsedStat = Member ParsedStatHierarchy
 
 mutual 
   parseStat : Parser ParsedStat
@@ -110,21 +70,6 @@ parsePair = do
   b <- some letter
   pure (pack a, pack b)
 
-total
-public export
-ParsedFuncSigTys : FuncSigTypes
-ParsedFuncSigTys = MkFunSigTypes String String String id (Pair String)
-
-total
-public export
-ParsedFuncSig : Type
-ParsedFuncSig = FuncSig ParsedFuncSigTys
-
-total
-public export
-ParsedFunc : Type 
-ParsedFunc = (ParsedFuncSig, List ParsedStat)
-
 parseFunc : Parser (ParsedFuncSig, List ParsedStat)
 parseFunc = do 
   access <- some letter <* token " "
@@ -139,26 +84,17 @@ parseFunc = do
   let sig = MkFuncSig access' ty' name' params'
   pure $ (sig, defn)
 
-total
-public export
-ParsedMod : Type
-ParsedMod = Mod (ParsedStat) (ParsedFuncSigTys)
-
 parseMod : Parser ParsedMod
 parseMod = do 
   funcs <- (parseFunc `sepBy` endOfLine)
   eof
   pure $ MkMod "default_mod" funcs
 
---export
-total --assert total because strings have finite length.
+total export
 parseProgram : String -> Comp (Program ParsedStat ParsedFuncSigTys)
 parseProgram s = assert_total $ case parse parseMod s of
                                    Left e => raise e
                                    Right p => pure (MkProgram [p])
-
-test : String -> Either String ParsedStat
-test s = parse parseStat s
 
 
 
