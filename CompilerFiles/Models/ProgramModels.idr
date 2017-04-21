@@ -48,8 +48,6 @@ record FuncApplication (argTy : Type) where
 Term : List Type -> Type
 Term l = DepUnion l 
 
-
-
 --constants
 
 --modules
@@ -63,13 +61,6 @@ record Mod (statTy: Type) (funcTy : FuncSigTypes)where
 record Program (statTy: Type) (funcTy : FuncSigTypes) where
   constructor MkProgram 
   modules : List (Mod statTy funcTy)
-
-
-
-
-implementation Show (Mod a b) where
-  show n = "it's a module"
-
 
 
 

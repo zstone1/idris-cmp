@@ -55,7 +55,15 @@ cumulativity3 n m a t with (cmp n m)
 
 
 liftComplexity : (List ParsedTerm) -> (n : Nat ** List (ParsedTermC n))
-liftComplexity = ?lift_complexity_parsed_term
+liftComplexity l = (0 ** [])
+{-
+  let complexity = foldr maximum 0 (map fst l) in
+  (_ ** map (liftTerm complexity) l) where
+     liftTerm : (c :Nat) -> ParsedTerm -> ParsedTermC c
+       liftTerm c (n ** term) = 
+       let lte : (n `LTE` c)  = believe_me () in
+       cumulativity3 n c lte term
+-}
 
 rtn : Parser ()
 rtn = token "return"
@@ -98,21 +106,25 @@ record ParsedCondition (ty:Type) where
   guard : ParsedTerm
   body : List ty
 
+total
 public export
 ParsedStatTys : Nat -> List Type
 ParsedStatTys Z = [ParsedReturn, ParsedExec]
 ParsedStatTys (S n) = [ParsedCondition (DepUnion (ParsedStatTys n))] ++ ParsedStatTys n
 
+total
 public export
 ParsedStatC : Nat -> Type
 ParsedStatC = DepUnion . ParsedStatTys
 
+total
 public export
 ParsedStat : Type
 ParsedStat = (n : Nat ** ParsedStatC n)
 
+total
 liftComplexityStat : (List ParsedStat) -> (n : Nat ** List (ParsedStatC n))
-liftComplexityStat = ?lift_complexity_parsed_stat
+liftComplexityStat _ = (0 ** [])
 
 mutual 
   parseStat : Parser ParsedStat
@@ -196,11 +208,9 @@ parseProgram s = assert_total $ case parse parseMod s of
                                    Right p => pure (MkProgram [p])
 
 test : String -> String
-test s = case parse parseMod s of
+test s = case parse parseTerm s of
               Left e => e
-              Right e => show e
-
-
+              Right a => show a
 
 
 
