@@ -11,6 +11,15 @@ ParsedTermHierarchy (S c) = [FuncApplication (assert_total $ ParsedTermHierarchy
 ParsedTerm : Type
 ParsedTerm = Member ParsedTermHierarchy
 
+record ParsedConstant' (t:Type) where
+  constructor MkParsedConstant
+  name : String
+  access : String
+  val : t
+
+ParsedConstant : Type
+ParsedConstant = DepUnion [ParsedConstant' Int, ParsedConstant' String]
+
 --statement
 record ParsedReturn where
   constructor MkParsedReturn
@@ -45,5 +54,5 @@ ParsedFunc = (ParsedFuncSig, List ParsedStat)
 --module
 
 ParsedMod : Type
-ParsedMod = Mod (ParsedStat) (ParsedFuncSigTys)
+ParsedMod = Mod (ParsedStat) (ParsedFuncSigTys) ParsedConstant
 

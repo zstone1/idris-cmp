@@ -88,10 +88,10 @@ parseMod : Parser ParsedMod
 parseMod = do 
   funcs <- (parseFunc `sepBy` endOfLine)
   eof
-  pure $ MkMod "default_mod" funcs
+  pure $ MkMod "default_mod" funcs []
 
 total export
-parseProgram : String -> Comp (Program ParsedStat ParsedFuncSigTys)
+parseProgram : String -> Comp (Program ParsedStat ParsedFuncSigTys ParsedConstant)
 parseProgram s = assert_total $ case parse parseMod s of
                                    Left e => raise e
                                    Right p => pure (MkProgram [p])

@@ -14,14 +14,15 @@ extract: DepUnion [x] -> x
 extract (MkDepUnion v {p = Z}) = v
 extract (MkDepUnion _ {p = S l}) = absurd l
 
+toFuncForm : (l: List (t:Type ** (t-> u))) -> (t:Type) -> (v:t) -> (SubElem t (Functor.map DPair.fst l)) -> u
+toFuncForm ((t1 ** f1) :: fs) t1 v (Z) = f1 v
+toFuncForm ((t1 ** f1) :: fs) t v (S later) = toFuncForm fs t v later
+
 dep: {t:Type} -> {l : List Type} -> {auto p : SubElem t l} -> (v:t) -> DepUnion l
 dep {t} {l} {p} v = MkDepUnion v
 
-depMatch : DepUnion l -> (f: (x:Type) -> SubElem x l -> x -> t) -> t
-depMatch (MkDepUnion {l=[]} {p} _) _ = absurd p
-depMatch (MkDepUnion {l = t::us} {t} {p = Z} v) f = f t Z v
-depMatch (MkDepUnion {l = u::us} {t} {p = S later} v) f = 
-  depMatch (MkDepUnion {l=us} v) (\a,b,c => f a (S b) c)
+depMatch : DepUnion l -> (f : (x:Type) ->  x -> SubElem x l -> u) -> u
+depMatch (MkDepUnion {p} {t} v) f = f t v p
 
 %hint
 elemTrans : SubElem x ys -> SubList ys zs -> SubElem x zs
@@ -45,24 +46,24 @@ Show (DepUnion []) where
 
 Show a => Show (DepUnion [a]) where
   show d = depMatch d showf where
-    showf : Show a => (x:Type) -> (SubElem x [a])  -> x -> String
-    showf _ Z v = show v
-    showf _ (S later) _ = absurd later
+    showf : Show a => (x:Type) -> x -> (SubElem x [a]) -> String
+    showf _ v Z = show v
+    showf _ _ (S later) = absurd later
 
 (Show a, Show b) => Show (DepUnion [a,b]) where
   show d = depMatch d showf where
-    showf : (Show a, Show b) => (x:Type) -> (SubElem x [a,b])  -> x -> String
-    showf _ Z v = show v
-    showf _ (S Z) v = show v
-    showf _ (S (S later)) _ = absurd later
+    showf : (Show a, Show b) => (x:Type) -> x -> (SubElem x [a,b]) -> String
+    showf _ v Z = show v
+    showf _ v (S Z) = show v
+    showf _ _ (S (S later)) = absurd later
 
 (Show a, Show b, Show c) => Show (DepUnion [a,b,c]) where
   show d = depMatch d showf where
-    showf : (Show a, Show b, Show c) => (x:Type) -> (SubElem x [a,b,c])  -> x -> String
-    showf _ Z v = show v
-    showf _ (S Z) v = show v
-    showf _ (S (S Z)) v = show v
-    showf _ (S (S (S later))) _ = absurd later
+    showf : (Show a, Show b, Show c) => (x:Type) -> x -> (SubElem x [a,b,c]) -> String
+    showf _ v Z = show v
+    showf _ v (S Z) = show v
+    showf _ v (S (S Z)) = show v
+    showf _ _ (S (S (S later))) = absurd later
 
 Show (DepUnion (a :: b :: c :: d :: xs)) where
   show d = "too deep"
@@ -78,8 +79,6 @@ readExample (MkDepUnion {p = S Z} v) = Right v
 readExample (MkDepUnion {p = (Z)} v) = Left v
 
 
-convert : DepUnion l -> (f : (x:Type) ->  x -> SubElem x l -> DepUnion r) -> DepUnion r 
-convert (MkDepUnion {p} {t} v) f = f t v p
 
 padWithId : (l,r:List Type)-> (overrides : List (x:Type ** x-> DepUnion r)) -> {auto totalprf : SubList l r} -> {t:Type} -> t ->  {auto a : SubElem t ((map DPair.fst overrides)++l)} -> DepUnion r
 padWithId [] _ [] {a} _ = absurd a
@@ -109,7 +108,7 @@ padWithIdTest2 = Refl
 
 |||Applies @f to the head of @d if it's a match. Otherwise it's a no-op, modulo type changes.
 push : (d:DepUnion (x::xs)) -> (f: x -> DepUnion (ys ++ xs)) -> DepUnion (ys ++ xs)
-push d f {xs}{ys} = convert d (\t,v,a => padWithId xs (ys ++ xs) [(_**f)] v {t=t}{a=a})
+push d f {xs}{ys} = depMatch d (\t,v,a => padWithId xs (ys ++ xs) [(_**f)] v {t=t}{a=a})
 
 private
 pushTest : "False" = show $ push {ys = []} (MkDepUnion {l=[String, Bool, Char]} False) (\s => MkDepUnion True)
@@ -136,20 +135,14 @@ collapseTest = Refl
 
 
 syntax dcase [d] "of" [f] = 
-  extract $ convert (Shuffle d) (\t,x,p => MkDepUnion ((toFuncForm f t x p ))) --composition doesn't play nice with implicit params
+  extract $ depMatch (Shuffle d) (\t,x,p => MkDepUnion ((toFuncForm f t x p ))) --composition doesn't play nice with implicit params
 syntax [t] ":" {i} "=>" [f] "%|" = (t ** \i : t => f)
 
---syntax [before] "|" [t] = t :: before
---syntax [t] term = | t end []  
-syntax [t] ":" {i} "=>" [f] = (t ** \i : t => f)
 infixl 0 |%
 
 (|%) : List (t:Type ** (t -> u)) -> (t:Type ** (t -> u)) -> List (t:Type ** (t -> u))
 (|%) l a = a :: l
 
-toFuncForm : (l: List (t:Type ** (t-> u))) -> (t:Type) -> (v:t) -> (SubElem t (Functor.map DPair.fst l)) -> u
-toFuncForm ((t1 ** f1) :: fs) t1 v (Z) = f1 v
-toFuncForm ((t1 ** f1) :: fs) t v (S later) = toFuncForm fs t v later
 
 private
 SynTestVal : Bool 
@@ -165,7 +158,6 @@ synTest : True = SynTestVal
 synTest = Refl
 
 
- 
  
  
  
