@@ -13,11 +13,11 @@ public export
 TypedConstant : Type
 TypedConstant = DepUnion (map TypedConstant' ConstantBaseTypes)
 
-typeConst' : {t:Type} -> ParsedConstant' t -> Comp (TypedConstant' t)
-typeConst' (MkParsedConstant n a t) = pure $ MkTypedConstant n !(parseAccess a) t
+typeConstants' : {t:Type} -> ParsedConstant' t -> Comp (TypedConstant' t)
+typeConstants' (MkParsedConstant n a t) = pure $ MkTypedConstant n !(parseAccess a) t
 
 export
-typeConst : Program a b ParsedConstant -> Comp (Program a b TypedConstant)
-typeConst = let f = depMatch' $ mapToMatcher {l = ConstantBaseTypes} $ typeConst' in
+typeConstants : Program a b ParsedConstant -> Comp (Program a b TypedConstant)
+typeConstants = let f = depMatch' $ mapToMatcher {l = ConstantBaseTypes} $ typeConstants' in
                 traverseProgram $ traverseModuleConsts $ f
 
