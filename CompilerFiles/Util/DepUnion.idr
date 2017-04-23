@@ -24,6 +24,9 @@ dep {t} {l} {p} v = MkDepUnion v
 depMatch : DepUnion l -> (f : (x:Type) ->  x -> SubElem x l -> u) -> u
 depMatch (MkDepUnion {p} {t} v) f = f t v p
 
+depMatch' : (f : (x:Type) ->  x -> SubElem x l -> u) -> DepUnion l -> u
+depMatch' = flip depMatch
+
 %hint
 elemTrans : SubElem x ys -> SubList ys zs -> SubElem x zs
 elemTrans x SubNil = absurd x
@@ -33,6 +36,8 @@ elemTrans {ys = y::ys'} (S later) (InList e l) = elemTrans later l
 addSubElem : SubElem x (y::y::ys) -> SubElem x (y::ys)
 addSubElem Z = Z
 addSubElem (S l) = l
+
+
 
 %hint
 implicit

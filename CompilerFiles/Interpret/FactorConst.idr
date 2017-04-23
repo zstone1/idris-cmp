@@ -10,7 +10,7 @@ record TypedConstant' (t:Type) where
 ConstantBaseTypes :List Type
 ConstantBaseTypes = [Int, String]
 
-typeConst' : ParsedConstant' t -> Comp (TypedConstant' t)
+typeConst' : {t:Type} -> ParsedConstant' t -> Comp (TypedConstant' t)
 typeConst' (MkParsedConstant n a t) = pure $ MkTypedConstant n !(parseAccess a) t
 
 typeConvert : Applicative m => 
@@ -21,17 +21,15 @@ typeConvert : Applicative m =>
               x -> 
               SubElem x (map pre l) -> 
               m ( DepUnion (map post l))
-typeConvert {m} {post} {l = []} _ _ _ p  = absurd p
-typeConvert {m} {post} {l = t::ts} f _ v Z = [| dep (f v) |]
-typeConvert {m} {post} {l = t'::ts} f t v (S n) = 
+typeConvert {l = []} _ _ _ p  = absurd p
+typeConvert {l = t::ts} f _ v Z = [| dep (f v) |]
+typeConvert {l = t'::ts} f t v (S n) = 
   let sub = dropPrefix (subListId _) {zs = [_] } in 
       [| (\r => Shuffle r {left = sub}) (typeConvert f t v n) |]
 
---computeTypedConstants : {l : List Type} -> DepUnion (map ParsedConstant' l) ->
---                 Comp ( DepUnion (map TypedConstant' l))
---computeTypedConstants = flip depMatch (typeConvert (typeConst'))
-
-
+computeTypedConstants : {l : List Type} -> DepUnion (map ParsedConstant' l) -> Comp {env} ( DepUnion (map TypedConstant' l))
+computeTypedConstants = getEff . (depMatch' $ typeConvert $ monadEffT . typeConst')
+    
 --typeConst : ParsedConstant -> Comp TypedConstant
 --typeConst m = dcase m of []
 --              |% ( _ ** \i:(ParsedConstant' String ) => [| MkDepUnion (typeConst' i)|])
