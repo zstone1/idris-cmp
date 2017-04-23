@@ -10,8 +10,12 @@ record TypedConstant' (t:Type) where
   val : t
 
 public export
+TypedConstantTys : List Type
+TypedConstantTys = (map TypedConstant' ConstantBaseTypes) 
+
+public export
 TypedConstant : Type
-TypedConstant = DepUnion (map TypedConstant' ConstantBaseTypes)
+TypedConstant = DepUnion TypedConstantTys 
 
 typeConstants' : {t:Type} -> ParsedConstant' t -> Comp (TypedConstant' t)
 typeConstants' (MkParsedConstant n a t) = pure $ MkTypedConstant n !(parseAccess a) t
