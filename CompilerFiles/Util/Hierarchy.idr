@@ -46,3 +46,43 @@ using ( h : Hierarchy)
          let lte : (n `LTE` c) = believe_me () in
          cumulative3 n c lte term
 
+  incrMapToLevelMap : ((c:Nat) -> (DepUnion (h c)) -> u) -> (n : Nat) -> (h#.n) -> u
+  incrMapToLevelMap f Z x = f Z x
+  incrMapToLevelMap f (S n) x with (split x)
+    | Left l = f (S n) l
+    | Right r = (incrMapToLevelMap f n r)
+    
+  levelMapToHierarchy : ((c : Nat) -> (h#.c) -> u) -> Member h -> u
+  levelMapToHierarchy f (n ** x) =  f n x
+
+  incrMapToHierarchy :((c:Nat) -> (DepUnion (h c)) -> u) -> Member h -> u
+  incrMapToHierarchy = levelMapToHierarchy . incrMapToLevelMap
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -27,6 +27,7 @@ depMatch (MkDepUnion {p} {t} v) f = f t v p
 depMatch' : (f : (x:Type) ->  x -> SubElem x l -> u) -> DepUnion l -> u
 depMatch' = flip depMatch
 
+
 %hint
 elemTrans : SubElem x ys -> SubList ys zs -> SubElem x zs
 elemTrans x SubNil = absurd x
@@ -46,6 +47,65 @@ shuffle (MkDepUnion {p = S later} v) {left = InList e rest} = MkDepUnion {p = el
 
 shuffle' : {auto left: SubList l r} -> DepUnion l -> DepUnion r
 shuffle' {left} d= shuffle {left} d
+
+
+
+padWithId : (l,r:List Type)-> (overrides : List (x:Type ** x-> DepUnion r)) -> {auto totalprf : SubList l r} -> {t:Type} -> t ->  {auto a : SubElem t ((map DPair.fst overrides)++l)} -> DepUnion r
+padWithId [] _ [] {a} _ = absurd a
+padWithId (l::ls) r {totalprf = InList p n} [] {a} v with(a)
+  | Z = MkDepUnion v
+  | S later =  padWithId ls r {totalprf = n} [] {a=later} v
+padWithId l r {totalprf = InList} ((o ** f) :: os) {a} v with (a)
+  | Z = f v
+  | S later = padWithId l r os {a=later} v
+
+
+|||Applies @f to the head of @d if it's a match. Otherwise it's a no-op, modulo type changes.
+push : (d:DepUnion (x::xs)) -> (f: x -> DepUnion (ys ++ xs)) -> DepUnion (ys ++ xs)
+push d f {xs}{ys} = depMatch d (\t,v,a => padWithId xs (ys ++ xs) [(_**f)] v {t=t}{a=a})
+
+
+|||Applies a simple map to the head of @d, if it's a match.
+pushOne : (d: DepUnion (x::xs)) -> (f: x -> y) -> DepUnion(y::xs)
+pushOne d f {y} = push {ys = [y]} d (\x => MkDepUnion(f x)) 
+
+|||If @d is a match for @x, the type is collapsed into the other types of the union.
+collapse : (d: DepUnion (x :: xs)) -> (f: x -> DepUnion xs) -> DepUnion xs
+collapse d f = push {ys = []} d f
+
+subElemConcat : SubElem x (ys ++ zs) -> Either (SubElem x ys) (SubElem x zs)
+subElemConcat {ys = []} p = Right p
+subElemConcat {ys = y::ys} Z = Left Z
+subElemConcat {ys = y::ys} (S n) with(subElemConcat n)
+  |Left q = Left$ S q
+  |Right q = Right q
+
+split : DepUnion (xs ++ ys) -> Either (DepUnion xs) (DepUnion ys)
+split (MkDepUnion {t} v {p}) = case subElemConcat p of
+                                    Left q => Left$ MkDepUnion {p=q} v
+                                    Right q => Right$ MkDepUnion {p=q} v
+
+mapToMatcher : Applicative m => 
+              (f : {t:Type} -> pre t -> m (post t)) -> 
+              (x:Type) -> 
+              x -> 
+              SubElem x (map pre l) -> 
+              m ( DepUnion (map post l))
+mapToMatcher {l = []} _ _ _ p  = absurd p
+mapToMatcher {l = t::ts} f _ v Z = [| dep (f v) |]
+mapToMatcher {l = t'::ts} f t v (S n) = 
+  let sub = dropPrefix (subListId _) {zs = [_]} in 
+      [| (shuffle' {left = sub}) (mapToMatcher f t v n) |]
+
+
+syntax dcase [d] "of" [f] = 
+  extract $ depMatch (shuffle d) (\t,x,p => MkDepUnion ((toFuncForm f t x p ))) --composition doesn't play nice with implicit params
+syntax [t] ":" {i} "=>" [f] "%|" = (t ** \i : t => f)
+
+infixl 0 |%
+
+(|%) : List (t:Type ** (t -> u)) -> (t:Type ** (t -> u)) -> List (t:Type ** (t -> u))
+(|%) l a = a :: l
 
 Show (DepUnion []) where
   show t = absurd t
@@ -73,52 +133,6 @@ Show a => Show (DepUnion [a]) where
 
 Show (DepUnion (a :: b :: c :: d :: xs)) where
   show d = "too deep"
-
-
-padWithId : (l,r:List Type)-> (overrides : List (x:Type ** x-> DepUnion r)) -> {auto totalprf : SubList l r} -> {t:Type} -> t ->  {auto a : SubElem t ((map DPair.fst overrides)++l)} -> DepUnion r
-padWithId [] _ [] {a} _ = absurd a
-padWithId (l::ls) r {totalprf = InList p n} [] {a} v with(a)
-  | Z = MkDepUnion v
-  | S later =  padWithId ls r {totalprf = n} [] {a=later} v
-padWithId l r {totalprf = InList} ((o ** f) :: os) {a} v with (a)
-  | Z = f v
-  | S later = padWithId l r os {a=later} v
-
-
-|||Applies @f to the head of @d if it's a match. Otherwise it's a no-op, modulo type changes.
-push : (d:DepUnion (x::xs)) -> (f: x -> DepUnion (ys ++ xs)) -> DepUnion (ys ++ xs)
-push d f {xs}{ys} = depMatch d (\t,v,a => padWithId xs (ys ++ xs) [(_**f)] v {t=t}{a=a})
-
-
-|||Applies a simple map to the head of @d, if it's a match.
-pushOne : (d: DepUnion (x::xs)) -> (f: x -> y) -> DepUnion(y::xs)
-pushOne d f {y} = push {ys = [y]} d (\x => MkDepUnion(f x)) 
-
-|||If @d is a match for @x, the type is collapsed into the other types of the union.
-collapse : (d: DepUnion (x :: xs)) -> (f: x -> DepUnion xs) -> DepUnion xs
-collapse d f = push {ys = []} d f
-
-mapToMatcher : Applicative m => 
-              (f : {t:Type} -> pre t -> m (post t)) -> 
-              (x:Type) -> 
-              x -> 
-              SubElem x (map pre l) -> 
-              m ( DepUnion (map post l))
-mapToMatcher {l = []} _ _ _ p  = absurd p
-mapToMatcher {l = t::ts} f _ v Z = [| dep (f v) |]
-mapToMatcher {l = t'::ts} f t v (S n) = 
-  let sub = dropPrefix (subListId _) {zs = [_]} in 
-      [| (shuffle' {left = sub}) (mapToMatcher f t v n) |]
-
-
-syntax dcase [d] "of" [f] = 
-  extract $ depMatch (shuffle d) (\t,x,p => MkDepUnion ((toFuncForm f t x p ))) --composition doesn't play nice with implicit params
-syntax [t] ":" {i} "=>" [f] "%|" = (t ** \i : t => f)
-
-infixl 0 |%
-
-(|%) : List (t:Type ** (t -> u)) -> (t:Type ** (t -> u)) -> List (t:Type ** (t -> u))
-(|%) l a = a :: l
 
 --Tests 
 private
