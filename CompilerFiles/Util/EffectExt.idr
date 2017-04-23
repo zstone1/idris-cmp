@@ -29,6 +29,6 @@ nextName = do
   pure  ("_"++show next)
 
 Comp : {env : Type -> Type} -> {default CompEffs l:List EFFECT}  -> Type -> Type
-Comp {env} {l} t = EffM env t l (\v => l)
+Comp {env} {l} t =MonadEffT l env t 
 
 

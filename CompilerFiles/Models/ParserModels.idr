@@ -1,6 +1,7 @@
 module ParserModels
 import Util.RootUtil
 import Models.ProgramModels
+import Models.Core
 %access public export
 
 --term
@@ -17,8 +18,9 @@ record ParsedConstant' (t:Type) where
   access : String
   val : t
 
+public export
 ParsedConstant : Type
-ParsedConstant = DepUnion [ParsedConstant' Int, ParsedConstant' String]
+ParsedConstant = DepUnion (map ParsedConstant' ConstantBaseTypes)
 
 --statement
 record ParsedReturn where

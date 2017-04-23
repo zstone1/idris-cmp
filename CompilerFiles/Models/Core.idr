@@ -10,7 +10,10 @@ data AccessMod = Public
 parseAccess :  String -> Comp AccessMod
 parseAccess s = case s of 
                      "public" => pure Public
-                     _ => raise ("cannot parse " ++ s ++ " as an access modifier")
+                     _ => monadEffT $raise ("cannot parse " ++ s ++ " as an access modifier")
+
+ConstantBaseTypes :List Type
+ConstantBaseTypes = [Int, String]
 
 DecEq BuiltInType where
   decEq C0Int C0Int = Yes Refl

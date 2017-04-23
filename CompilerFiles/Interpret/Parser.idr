@@ -93,7 +93,7 @@ parseMod = do
 total export
 parseProgram : String -> Comp (Program ParsedStat ParsedFuncSigTys ParsedConstant)
 parseProgram s = assert_total $ case parse parseMod s of
-                                   Left e => raise e
+                                   Left e => monadEffT $ raise e
                                    Right p => pure (MkProgram [p])
 
 
