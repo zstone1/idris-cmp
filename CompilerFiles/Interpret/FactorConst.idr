@@ -24,18 +24,12 @@ typeConvert : Applicative m =>
 typeConvert {l = []} _ _ _ p  = absurd p
 typeConvert {l = t::ts} f _ v Z = [| dep (f v) |]
 typeConvert {l = t'::ts} f t v (S n) = 
-  let sub = dropPrefix (subListId _) {zs = [_] } in 
-      [| (\r => Shuffle r {left = sub}) (typeConvert f t v n) |]
+  let sub = dropPrefix (subListId _) {zs = [_]} in 
+      [| (\r => shuffle r {left = sub}) (typeConvert f t v n) |]
 
 computeTypedConstants : {l : List Type} -> DepUnion (map ParsedConstant' l) -> Comp {env} ( DepUnion (map TypedConstant' l))
 computeTypedConstants = getEff . (depMatch' $ typeConvert $ monadEffT . typeConst')
     
---typeConst : ParsedConstant -> Comp TypedConstant
---typeConst m = dcase m of []
---              |% ( _ ** \i:(ParsedConstant' String ) => [| MkDepUnion (typeConst' i)|])
---              |% ( _ ** \i:(ParsedConstant' Int) => [| MkDepUnion (typeConst' i)|])
-
-
 --typeConst : Program a b ParsedConstant -> Comp (Program a b TypedConstant)
---typeConst = traverseProgram (traverseModuleConsts 
+--typeConst = traverseProgram (traverseModuleConsts
 

@@ -23,7 +23,7 @@ using ( h : Hierarchy)
 
   cumulative2 : (h#.n) -> (h#.(m+n))
   cumulative2 {m = Z} a = a
-  cumulative2 {m = S k} a = Shuffle {left = cumulative1}  (cumulative2 a)
+  cumulative2 {m = S k} a = shuffle {left = cumulative1}  (cumulative2 a)
 
   lteHelper : a+x `LTE` a+y -> x `LTE` y
   lteHelper {a=Z} = id

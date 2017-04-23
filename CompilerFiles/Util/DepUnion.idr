@@ -41,10 +41,12 @@ addSubElem (S l) = l
 
 %hint
 implicit
-Shuffle : DepUnion l -> {auto left: SubList l r} -> DepUnion r
-Shuffle (MkDepUnion {p} _) {left = SubNil} = absurd p
-Shuffle (MkDepUnion {p = Z} v) {left = InList e rest}  = MkDepUnion v
-Shuffle (MkDepUnion {p = S later} v) {left = InList e rest} = MkDepUnion {p = elemTrans later rest} v
+shuffle : DepUnion l -> {auto left: SubList l r} -> DepUnion r
+shuffle (MkDepUnion {p} _) {left = SubNil} = absurd p
+shuffle (MkDepUnion {p = Z} v) {left = InList e rest}  = MkDepUnion v
+shuffle (MkDepUnion {p = S later} v) {left = InList e rest} = MkDepUnion {p = elemTrans later rest} v
+
+--shuffle' : {auto left: SubList l r} -> DepUnion l -> DepUnion r
 
 Show (DepUnion []) where
   show t = absurd t
@@ -140,7 +142,7 @@ collapseTest = Refl
 
 
 syntax dcase [d] "of" [f] = 
-  extract $ depMatch (Shuffle d) (\t,x,p => MkDepUnion ((toFuncForm f t x p ))) --composition doesn't play nice with implicit params
+  extract $ depMatch (shuffle d) (\t,x,p => MkDepUnion ((toFuncForm f t x p ))) --composition doesn't play nice with implicit params
 syntax [t] ":" {i} "=>" [f] "%|" = (t ** \i : t => f)
 
 infixl 0 |%
