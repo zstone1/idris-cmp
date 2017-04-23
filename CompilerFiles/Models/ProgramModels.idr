@@ -34,11 +34,13 @@ record Statement (tys : StatementTypes) where
 
 -- terms
 
-data IntLiteral : Type  where
-  MkIntLit : Nat -> IntLiteral
+record IntLiteral where
+  constructor MkIntLit 
+  intVal : Int
 
-data StringLiteral : Type where
-  MkStringLit : String -> StringLiteral
+record StringLiteral where
+  constructor MkStringLit 
+  strVal : String 
 
 record FuncApplication (argTy : Type) where
   constructor MkFuncApplication
