@@ -1,6 +1,7 @@
 module RootUtil
 import public Util.EqualExt
 import public Util.FoldExt
+import public Util.ListExt
 import public Util.DepUnion
 import public Util.EitherExt
 import public Util.EffectExt
@@ -13,6 +14,5 @@ import public Util.NatExt
 import public Util.PreorderReasoningExt
 import public Util.Projective
 import public Util.VectExt
-import public Util.BoolExt
 import public Util.Lens
 import public Util.Hierarchy

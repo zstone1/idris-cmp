@@ -46,3 +46,18 @@ filterBackwards {x} {f} (w :: ws) elem with (filter f ws) proof p1
       let (o, elemRec) = filterBackwards {x} {f} ws (rewrite sym p1 in later) in 
           (o, There elemRec)
 
+data ElemZipped : t -> Vect n t -> Type where
+  ZippedBy : (a:Vect i t) -> (x:t) -> (b: Vect j t) -> ElemZipped x (a ++ (x :: b))
+
+asZipped : {l:Vect n t} ->  Elem x l -> ElemZipped x l
+asZipped {x} {l=x::xs} Here = ZippedBy [] x xs
+asZipped {x} {l=y::xs} (There p) with (asZipped p)
+  asZipped {x} {l=y::(a ++ (x::b))} (There p) | ZippedBy a x b = ZippedBy (y::a) x (b)
+
+
+
+
+
+
+
+
