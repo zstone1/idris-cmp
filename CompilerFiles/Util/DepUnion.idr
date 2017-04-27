@@ -10,20 +10,25 @@ data DepUnion : List Type -> Type where
 Uninhabited (DepUnion []) where
   uninhabited (MkDepUnion {p} v )= absurd p
 
+|||DepUnions of one type are trivially just that type
 extract: DepUnion [x] -> x
 extract (MkDepUnion v {p = Z}) = v
 extract (MkDepUnion _ {p = S l}) = absurd l
 
-toFuncForm : (l: List (t:Type ** (t-> u))) -> (t:Type) -> (v:t) -> (SubElem t (Functor.map DPair.fst l)) -> u
+|||There is an isomorphism here that is useful.
+toFuncForm : (l: List (t:Type ** (t-> u))) -> ((t:Type) -> (v:t) -> (SubElem t (Functor.map DPair.fst l)) -> u)
 toFuncForm ((t1 ** f1) :: fs) t1 v (Z) = f1 v
 toFuncForm ((t1 ** f1) :: fs) t v (S later) = toFuncForm fs t v later
 
+|||Just MkDepUnion with different order of parameters. Useful for type inference reasons sometimes
 dep: {t:Type} -> {l : List Type} -> {auto p : SubElem t l} -> (v:t) -> DepUnion l
 dep {t} {l} {p} v = MkDepUnion v
 
+|||Given a description how to operate in each case, this does the operation
 depMatch : DepUnion l -> (f : (x:Type) ->  x -> SubElem x l -> u) -> u
 depMatch (MkDepUnion {p} {t} v) f = f t v p
 
+|||Same as depMatch, but a different order of arguments. Can simplify function composition.
 depMatch' : (f : (x:Type) ->  x -> SubElem x l -> u) -> DepUnion l -> u
 depMatch' = flip depMatch
 
@@ -34,12 +39,12 @@ elemTrans x SubNil = absurd x
 elemTrans Z (InList e _) = e
 elemTrans {ys = y::ys'} (S later) (InList e l) = elemTrans later l
 
+%hint
 addSubElem : SubElem x (y::y::ys) -> SubElem x (y::ys)
 addSubElem Z = Z
 addSubElem (S l) = l
 
 %hint
-implicit
 shuffle : DepUnion l -> {auto left: SubList l r} -> DepUnion r
 shuffle (MkDepUnion {p} _) {left = SubNil} = absurd p
 shuffle (MkDepUnion {p = Z} v) {left = InList e rest}  = MkDepUnion v
@@ -47,8 +52,6 @@ shuffle (MkDepUnion {p = S later} v) {left = InList e rest} = MkDepUnion {p = el
 
 shuffle' : {auto left: SubList l r} -> DepUnion l -> DepUnion r
 shuffle' {left} d= shuffle {left} d
-
-
 
 padWithId : (l,r:List Type)-> (overrides : List (x:Type ** x-> DepUnion r)) -> {auto totalprf : SubList l r} -> {t:Type} -> t ->  {auto a : SubElem t ((map DPair.fst overrides)++l)} -> DepUnion r
 padWithId [] _ [] {a} _ = absurd a
@@ -96,7 +99,6 @@ mapToMatcher {l = t::ts} f _ v Z = [| dep (f v) |]
 mapToMatcher {l = t'::ts} f t v (S n) = 
   let sub = dropPrefix (subListId _) {zs = [_]} in 
       [| (shuffle' {left = sub}) (mapToMatcher f t v n) |]
-
 
 syntax dcase [d] "of" [f] = 
   extract $ depMatch (shuffle d) (\t,x,p => MkDepUnion ((toFuncForm f t x p ))) --composition doesn't play nice with implicit params
@@ -182,7 +184,7 @@ private
 collapseHelper : DepUnion [Nat, String]
 collapseHelper = 
   let base = MkDepUnion {l = [String, Nat, Bool]} False in --This tests that shuffle is working implicitly.
-      collapse base (\i => if i then MkDepUnion "it was true"  else MkDepUnion "it was false" )
+      collapse (shuffle base) (\i => if i then MkDepUnion "it was true"  else MkDepUnion "it was false" )
 
 private
 collapseTest : "\"it was false\"" = show DepUnion.collapseHelper

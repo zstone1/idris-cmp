@@ -32,7 +32,9 @@ using ( h : Hierarchy)
   cumulative3 : (n,m:Nat) -> .(n `LTE` m) -> h#.n -> h#.m
   cumulative3 n m a t with (cmp n m)
     cumulative3 x x a t | CmpEQ = t
-    cumulative3 n (n+S i) a t | CmpLT i = rewrite plusCommutative n (S i) in cumulative2 {n=n}{m=S i} t
+    cumulative3 n (n+S i) a t | CmpLT i = 
+      let x = (cumulative2 {n=n}{m=S i} t) in
+          rewrite plusCommutative n (S i) in x
     cumulative3 (m+S i) m a t | CmpGT i =
       let a' :(m + S i `LTE` m + 0) = (rewrite plusZeroRightNeutral m in a) in
         absurd $ lteHelper a'
