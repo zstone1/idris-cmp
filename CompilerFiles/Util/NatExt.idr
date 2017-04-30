@@ -85,6 +85,39 @@ hexString : Nat -> String
 hexString = ("0x"++) . fromNat 16
 
 
+hint1 : {n:Nat} -> n*0+k = k
+hint1 {n} = rewrite multZeroRightZero n in Refl
+
+data CmpNat2 : Nat -> Nat -> Type where
+  CmpGT2 : (x : _) -> CmpNat2 (y + S x) y
+  CmpLTE2 : (x: _) -> CmpNat2 y (y + x )
+
+cmp2 : (n:Nat) -> (m:Nat) -> CmpNat2 n m
+cmp2 n m with (cmp n m)
+  cmp2 n (n + S i) | CmpLT i = CmpLTE2 (S i)
+  cmp2 (m + S i) m | CmpGT i = CmpGT2 i
+  cmp2 n n | CmpEQ = replace (plusZeroRightNeutral n) (CmpLTE2 Z)
+
+data Divide : Nat -> Nat -> Type where
+  Quotient : (q:Nat) -> (r:Fin d) -> Divide d (d*q + finToNat r)
+
+divideBy : (d:Nat) -> {auto prf : NonZero d} -> (n:Nat) -> Divide d n
+divideBy {prf} d n with (cmp2 d n)
+  divideBy (n+(S i)) n | CmpGT2 i = 
+    let lte : (S n `LTE` n+S i) = rewrite sym $ plusSuccRightSucc n i in lteAddRight {m=i} (S n) in
+    let quo1 = Quotient 0 (natToFin' n (n+S i) lte) in 
+    let quo2 = replace hint1 quo1 in
+    let quo3 = replace natToFinToNat quo2 in
+        quo3
+        
+  --Assert total because d is non zero, so  i < (d+i) 
+  divideBy d (d+i) | (CmpLTE2 i) with (assert_total (divideBy d i))
+   divideBy d (d + (d*q + finToNat r)) | _ | (Quotient q r) =
+     let quo1 : (Divide d (d*(S q) + finToNat r)) = Quotient (S q) r in  
+     let quo2 : (Divide d ((d + d*q) + finToNat r )) = rewrite sym ( multRightSuccPlus d q) in quo1 in
+     let quo3 : (Divide d (d + (d*q + finToNat r))) =  replace {P = Divide d} (sym (plusAssociative d (d*q) (finToNat r))) quo2 in 
+         quo3
+
 
 
 
