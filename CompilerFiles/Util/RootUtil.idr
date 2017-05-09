@@ -15,4 +15,5 @@ import public Util.PreorderReasoningExt
 import public Util.Projective
 import public Util.VectExt
 import public Util.Lens
+import public Util.Quotient
 import public Util.Hierarchy
