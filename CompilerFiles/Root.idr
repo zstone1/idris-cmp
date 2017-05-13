@@ -1,15 +1,15 @@
 module Main
 import Util.RootUtil
-import Interpret.RootInterpret
+--import Interpret.RootInterpret
 --import TypeCheck.RootTypeCheck
 --import Asm.RootAsm
 --import Conduct.RootConduct
-import Models.RootModels
-import Effects
-import Effect.System
-import Effect.StdIO
-import Effect.File
-import Control.IOExcept
+--import Models.RootModels
+--import Effects
+--import Effect.System
+--import Effect.StdIO
+--import Effect.File
+--import Control.IOExcept
 --import CoinProblem.RootCoinProblem
 
 
