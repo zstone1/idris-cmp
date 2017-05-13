@@ -1,2 +1,0 @@
-:set -XMultiParamTypeClasses -XFunctionalDependencies
-:set -XFlexibleInstances -XTemplateHaskell
